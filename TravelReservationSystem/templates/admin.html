@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .action-row{display:flex;flex-wrap:wrap;gap:6px}.action-btn{display:inline-block;width:auto;margin:0;padding:7px 10px;border:0;border-radius:7px;color:#fff;text-decoration:none;cursor:pointer;font-size:13px}.view{background:#198754}.delete{background:#dc3545}.status-form{display:flex;gap:5px;align-items:center}.status-form select{width:auto;padding:7px}.status-form button{width:auto;margin:0;padding:7px 10px}
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="dashboard-header">
+        <div><h1>Travel Reservation System</h1><p>Administrator Dashboard</p></div>
+        <a class="logout-btn" href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}<div class="message {{ category }}">{{ message }}</div>{% endfor %}
+    {% endwith %}
+
+    <div class="dashboard-card">
+        <h2>All Reservations</h2>
+        <p>Customer edit, cancellation, deletion, and status changes are reflected here.</p>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>ID</th><th>Customer</th><th>Passenger</th><th>Route</th><th>Date/Time</th><th>Vehicle</th><th>Fare</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                {% for r in reservations %}
+                    <tr>
+                        <td>{{ r['reservation_id'] }}</td>
+                        <td>{{ r['account_name'] }}<br><small>{{ r['username'] }}</small></td>
+                        <td>{{ r['passenger_name'] }}{% if r['passengers']|int > 1 %} (+{{ r['passengers']|int - 1 }}){% endif %}</td>
+                        <td>{{ r['origin'] }} → {{ r['destination'] }}</td>
+                        <td>{{ r['travel_date'] }}<br>{{ r['travel_time'] }}</td>
+                        <td>{{ r['vehicle'] }}</td>
+                        <td>₱{{ '%.2f'|format(r['fare']|float) }}</td>
+                        <td>
+                            <form class="status-form" method="POST" action="{{ url_for('update_status', reservation_id=r['reservation_id']) }}">
+                                <select name="status">
+                                    {% for s in ['Pending','Confirmed','Cancelled','Completed'] %}<option value="{{ s }}" {% if r['status']==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
+                                </select>
+                                <button type="submit">Update</button>
+                            </form>
+                        </td>
+                        <td>
+                            <div class="action-row">
+                                {% if r['first_ticket_number'] %}<a class="action-btn view" href="{{ url_for('view_ticket', ticket_number=r['first_ticket_number']) }}">🎫 Ticket</a>{% endif %}
+                                <form method="POST" action="{{ url_for('admin_delete_reservation', reservation_id=r['reservation_id']) }}" onsubmit="return confirm('Delete this reservation and its tickets permanently?');">
+                                    <button class="action-btn delete" type="submit">🗑 Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}<tr><td colspan="9">No reservations found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <h2>All Passenger Tickets</h2>
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Ticket</th><th>Customer</th><th>Passenger</th><th>Vehicle</th><th>Seat</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>
+                {% for t in tickets %}
+                    <tr><td>{{ t['ticket_number'] }}</td><td>{{ t['account_name'] }}</td><td>{{ t['passenger_name'] }}</td><td>{{ t['vehicle'] }}</td><td>{{ t['seat_number'] }}</td><td>{{ t['status'] }}</td><td><a class="action-btn view" href="{{ url_for('view_ticket', ticket_number=t['ticket_number']) }}">View Ticket</a> <a class="action-btn view" href="{{ url_for('view_receipt', ticket_number=t['ticket_number']) }}">🧾 Receipt</a></td></tr>
+                {% else %}<tr><td colspan="7">No tickets found.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <h2>Registered Users</h2>
+        <div class="table-container"><table><thead><tr><th>ID</th><th>Full Name</th><th>Username</th><th>Contact</th></tr></thead><tbody>
+        {% for u in users %}<tr><td>{{ u['user_id'] }}</td><td>{{ u['full_name'] }}</td><td>{{ u['username'] }}</td><td>{{ u['contact'] }}</td></tr>{% else %}<tr><td colspan="4">No users found.</td></tr>{% endfor %}
+        </tbody></table></div>
+    </div>
+</div>
+</body>
+</html>

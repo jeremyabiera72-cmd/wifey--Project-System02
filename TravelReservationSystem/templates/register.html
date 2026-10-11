@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register - Travel Reservation System</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <div class="login-card">
+
+        <h1>Create Account</h1>
+        <p class="subtitle">Travel Reservation System</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% for category, message in messages %}
+                <div class="message {{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endwith %}
+
+        <form method="POST">
+
+            <label>Full Name</label>
+            <input type="text"
+                   name="full_name"
+                   placeholder="Enter full name"
+                   required>
+
+            <label>Username</label>
+            <input type="text"
+                   name="username"
+                   placeholder="Create username"
+                   required>
+
+            <label>Contact Number</label>
+            <input type="text"
+                   name="contact"
+                   placeholder="Enter contact number"
+                   required>
+
+            <label>Password</label>
+            <input type="password"
+                   name="password"
+                   placeholder="Create password"
+                   required>
+
+            <label>Confirm Password</label>
+            <input type="password"
+                   name="confirm_password"
+                   placeholder="Confirm password"
+                   required>
+
+            <button type="submit">
+                Create Account
+            </button>
+
+        </form>
+
+        <p class="register-text">
+            Already have an account?
+            <a href="{{ url_for('login') }}">
+                Login here
+            </a>
+        </p>
+
+    </div>
+
+</div>
+
+</body>
+</html>

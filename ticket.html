@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title id="pageTitle">
+        Travel Ticket
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                sans-serif;
+
+            background: #eef2f6;
+
+            color: #1e293b;
+        }
+
+
+        .topbar {
+
+            max-width: 1100px;
+
+            margin: 24px auto 0;
+
+            display: flex;
+
+            gap: 10px;
+
+            align-items: center;
+
+            justify-content:
+                space-between;
+        }
+
+
+        .topbar h2 {
+
+            margin: 0;
+        }
+
+
+        .actions {
+
+            display: flex;
+
+            gap: 8px;
+        }
+
+
+        button,
+        a.btn {
+
+            border: 0;
+
+            border-radius: 8px;
+
+            padding:
+                10px 15px;
+
+            cursor: pointer;
+
+            text-decoration: none;
+
+            font-weight: bold;
+
+            background: #1976d2;
+
+            color: white;
+        }
+
+
+        .btn.gray {
+
+            background: #607d8b;
+        }
+
+
+        .ticket-wrap {
+
+            max-width: 1100px;
+
+            margin:
+                20px auto 50px;
+        }
+
+
+        .ticket {
+
+            background: white;
+
+            border-radius: 22px;
+
+            overflow: hidden;
+
+            box-shadow:
+                0 10px 35px
+                rgba(0,0,0,.12);
+        }
+
+
+        /* =========================
+           AIRPLANE
+        ========================= */
+
+        .air .ticket-head {
+
+            background: #147ee8;
+
+            color: white;
+
+            padding:
+                22px 30px;
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            align-items: center;
+        }
+
+
+        .air .brand {
+
+            font-size: 25px;
+
+            font-weight: 800;
+
+            letter-spacing: 2px;
+        }
+
+
+        .air .boarding {
+
+            font-size: 22px;
+
+            font-weight: 800;
+
+            letter-spacing: 2px;
+        }
+
+
+        /* =========================
+           FERRY
+        ========================= */
+
+        .ferry .ticket-head {
+
+            background:
+                linear-gradient(
+                    110deg,
+                    #12b7c6 0%,
+                    #12b7c6 42%,
+                    #f4c430 42%,
+                    #f4c430 58%,
+                    #ee5b57 58%,
+                    #ee5b57 72%,
+                    #12b7c6 72%
+                );
+
+            color: white;
+
+            padding:
+                22px 30px;
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            align-items: center;
+        }
+
+
+        .ferry .brand {
+
+            font-size: 24px;
+
+            font-weight: 800;
+
+            letter-spacing: 1px;
+        }
+
+
+        .ferry .boarding {
+
+            font-size: 20px;
+
+            font-weight: 800;
+        }
+
+
+        /* =========================
+           GENERIC
+        ========================= */
+
+        .generic .ticket-head {
+
+            background: #1976d2;
+
+            color: white;
+
+            padding:
+                22px 30px;
+
+            display: flex;
+
+            justify-content:
+                space-between;
+        }
+
+
+        .ticket-body {
+
+            display: grid;
+
+            grid-template-columns:
+                1fr 270px;
+
+            min-height: 390px;
+        }
+
+
+        .main-info {
+
+            padding:
+                28px 34px;
+        }
+
+
+        .side-pass {
+
+            border-left:
+                2px dashed #cbd5e1;
+
+            padding:
+                28px 22px;
+
+            text-align: center;
+
+            background: #fafafa;
+        }
+
+
+        .route {
+
+            display: flex;
+
+            gap: 20px;
+
+            align-items: center;
+
+            margin-bottom: 28px;
+        }
+
+
+        .route .place {
+
+            flex: 1;
+        }
+
+
+        .route small,
+        .label {
+
+            display: block;
+
+            color: #64748b;
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            letter-spacing: .6px;
+        }
+
+
+        .route strong {
+
+            display: block;
+
+            font-size: 28px;
+
+            margin-top: 4px;
+        }
+
+
+        .arrow {
+
+            font-size: 28px;
+
+            color: #1976d2;
+        }
+
+
+        .grid {
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap:
+                20px 24px;
+        }
+
+
+        .value {
+
+            font-size: 17px;
+
+            font-weight: 700;
+
+            margin-top: 5px;
+
+            word-break:
+                break-word;
+        }
+
+
+        .seat {
+
+            font-size: 30px;
+
+            color: #1976d2;
+
+            font-weight: 900;
+        }
+
+
+        .status {
+
+            display: inline-block;
+
+            margin-top: 10px;
+
+            padding:
+                7px 13px;
+
+            border-radius: 999px;
+
+            font-weight: 800;
+
+            font-size: 13px;
+        }
+
+
+        .pending {
+
+            background: #fff3cd;
+
+            color: #856404;
+        }
+
+
+        .confirmed {
+
+            background: #d1fae5;
+
+            color: #065f46;
+        }
+
+
+        .cancelled {
+
+            background: #fee2e2;
+
+            color: #991b1b;
+        }
+
+
+        .completed {
+
+            background: #dbeafe;
+
+            color: #1e40af;
+        }
+
+
+        .qr {
+
+            width: 190px;
+
+            height: 190px;
+
+            object-fit: contain;
+
+            background: white;
+
+            margin:
+                12px auto;
+        }
+
+
+        .verify-url {
+
+            font-size: 10px;
+
+            color: #64748b;
+
+            word-break:
+                break-all;
+        }
+
+
+        .ticket-number {
+
+            font-weight: 900;
+
+            letter-spacing: 1px;
+        }
+
+
+        .note {
+
+            max-width: 1100px;
+
+            margin:
+                0 auto 30px;
+
+            color: #64748b;
+
+            text-align: center;
+
+            font-size: 13px;
+        }
+
+
+        /* =========================
+           MOBILE
+        ========================= */
+
+        @media(max-width:760px) {
+
+            .topbar {
+
+                margin: 15px;
+
+                flex-direction: column;
+
+                align-items: stretch;
+            }
+
+
+            .actions {
+
+                flex-wrap: wrap;
+            }
+
+
+            .ticket-wrap {
+
+                margin: 15px;
+            }
+
+
+            .ticket-body {
+
+                grid-template-columns:
+                    1fr;
+            }
+
+
+            .side-pass {
+
+                border-left: 0;
+
+                border-top:
+                    2px dashed #cbd5e1;
+            }
+
+
+            .grid {
+
+                grid-template-columns:
+                    1fr 1fr;
+            }
+
+
+            .route strong {
+
+                font-size: 20px;
+            }
+
+        }
+
+
+        /* =========================
+           PRINT
+        ========================= */
+
+        @media print {
+
+            body {
+
+                background: white;
+            }
+
+
+            .topbar,
+            .note {
+
+                display: none !important;
+            }
+
+
+            .ticket-wrap {
+
+                margin: 0;
+
+                max-width: none;
+            }
+
+
+            .ticket {
+
+                box-shadow: none;
+
+                border:
+                    1px solid #ddd;
+            }
+
+
+            @page {
+
+                size: A4 landscape;
+
+                margin: 12mm;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="topbar">
+
+    <h2>
+        🎫 Travel Ticket
+    </h2>
+
+
+    <div class="actions">
+
+        <a
+            class="btn gray"
+            href="map.html"
+            id="backBtn"
+        >
+            ← Back
+        </a>
+
+
+        <button
+            onclick="window.print()"
+        >
+            🖨️ Print Ticket
+        </button>
+
+    </div>
+
+</div>
+
+
+
+<div class="ticket-wrap">
+
+    <div
+        class="ticket generic"
+        id="ticketCard"
+    >
+
+
+        <!-- HEADER -->
+
+        <div class="ticket-head">
+
+            <div class="brand" id="ticketBrand">
+
+                TRAVEL RESERVATION SYSTEM
+
+            </div>
+
+
+            <div class="boarding">
+
+                BOARDING PASS
+
+            </div>
+
+        </div>
+
+
+
+        <!-- BODY -->
+
+        <div class="ticket-body">
+
+
+            <!-- MAIN TICKET -->
+
+            <div class="main-info">
+
+
+                <div class="route">
+
+                    <div class="place">
+
+                        <small>
+                            STARTING POINT
+                        </small>
+
+                        <strong id="ticketStartingLocation">
+                            Molave
+                        </strong>
+
+                    </div>
+
+
+                    <div class="arrow">
+
+                        →
+
+                    </div>
+
+
+                    <div class="place">
+
+                        <small>
+                            ORIGIN
+                        </small>
+
+                        <strong id="ticketOrigin">
+                            Molave
+                        </strong>
+
+                    </div>
+
+
+                    <div class="arrow">
+
+                        →
+
+                    </div>
+
+
+                    <div class="place">
+
+                        <small>
+                            DESTINATION
+                        </small>
+
+                        <strong id="ticketDestination">
+                            Pagadian City
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="grid">
+
+
+                    <div>
+
+                        <span class="label">
+                            PASSENGER
+                        </span>
+
+                        <div class="value" id="ticketPassenger">
+                            Passenger
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            DATE
+                        </span>
+
+                        <div class="value" id="ticketDate">
+                            2026-10-11
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            TIME
+                        </span>
+
+                        <div class="value" id="ticketTime">
+                            10:00
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            VEHICLE
+                        </span>
+
+                        <div class="value" id="ticketVehicle">
+                            Bus
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            SEAT
+                        </span>
+
+                        <div class="value seat" id="ticketSeat">
+                            RIDE
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            TICKET NO.
+                        </span>
+
+                        <div class="value ticket-number" id="ticketNumber">
+                            TKT-20261011-0001
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            FARE
+                        </span>
+
+                        <div class="value" id="ticketFare">
+                            ₱0.00
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            BOOKING TYPE
+                        </span>
+
+                        <div class="value" id="ticketBookingType">
+                            Direct Ride
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            STATUS
+                        </span>
+
+                        <div>
+
+                            <span
+                                class="status confirmed"
+                                id="ticketStatus"
+                            >
+                                CONFIRMED
+                            </span>
+
+                        </div>
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+
+            <!-- BOARDING PASS / QR -->
+
+            <div class="side-pass">
+
+
+                <div class="label">
+
+                    BOARDING PASS
+
+                </div>
+
+
+                <div
+                    class="value"
+                    id="ticketSidePassenger"
+                    style="
+                        font-size:22px;
+                        margin-top:10px;
+                    "
+                >
+                    Passenger
+                </div>
+
+
+                <div style="margin-top:14px;">
+
+                    <span class="label">
+                        SEAT
+                    </span>
+
+
+                    <div class="seat" id="ticketSideSeat">
+                        RIDE
+                    </div>
+
+                </div>
+
+
+                <!-- QR CODE -->
+
+                <img
+                    class="qr"
+                    id="ticketQrImg"
+                    src=""
+                    alt="Dynamic verification QR code"
+                >
+
+
+                <div class="label">
+
+                    SCAN TO VERIFY
+
+                </div>
+
+
+                <div class="verify-url" id="ticketVerifyUrl">
+                    Ticket Verification
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<div class="note">
+
+    The QR code opens the live verification page.
+
+    If the administrator changes the reservation status,
+
+    scanning the same QR code shows the updated status.
+
+</div>
+
+
+<script>
+    function updateTicketUI(t) {
+        if (!t) return;
+        const vehicle = t.vehicle || 'Bus';
+        document.getElementById('pageTitle').textContent = `${vehicle} Ticket - ${t.ticket_number || ''}`;
+
+        const card = document.getElementById('ticketCard');
+        const brand = document.getElementById('ticketBrand');
+        card.className = 'ticket';
+        if (vehicle === 'Airplane') {
+            card.classList.add('air');
+            brand.textContent = '✈ WORLD VECTOR AIRLINES';
+        } else if (vehicle === 'Ferry') {
+            card.classList.add('ferry');
+            brand.textContent = '🌊 SEA BREEZE FERRY';
+        } else {
+            card.classList.add('generic');
+            brand.textContent = 'TRAVEL RESERVATION SYSTEM';
+        }
+
+        document.getElementById('ticketStartingLocation').textContent = t.starting_location || t.origin || '—';
+        document.getElementById('ticketOrigin').textContent = t.origin || '—';
+        document.getElementById('ticketDestination').textContent = t.destination || '—';
+        document.getElementById('ticketPassenger').textContent = t.passenger_name || 'Passenger';
+        document.getElementById('ticketSidePassenger').textContent = t.passenger_name || 'Passenger';
+        document.getElementById('ticketDate').textContent = t.travel_date || new Date().toISOString().split('T')[0];
+        document.getElementById('ticketTime').textContent = t.travel_time || new Date().toTimeString().slice(0, 5);
+        document.getElementById('ticketVehicle').textContent = vehicle;
+        document.getElementById('ticketSeat').textContent = t.seat_number || 'RIDE';
+        document.getElementById('ticketSideSeat').textContent = t.seat_number || 'RIDE';
+        document.getElementById('ticketNumber').textContent = t.ticket_number || 'TKT-00000000-0000';
+        const fareNum = Number(t.fare || 0);
+        document.getElementById('ticketFare').textContent = '₱' + fareNum.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('ticketBookingType').textContent = t.booking_type || 'Direct Ride';
+        
+        const statusEl = document.getElementById('ticketStatus');
+        const st = (t.status || 'CONFIRMED').toLowerCase();
+        statusEl.className = 'status ' + st;
+        statusEl.textContent = (t.status || 'CONFIRMED').toUpperCase();
+
+        if (t.qr_data_uri) {
+            document.getElementById('ticketQrImg').src = t.qr_data_uri;
+        }
+        document.getElementById('ticketVerifyUrl').textContent = `${t.ticket_number || ''} · ${t.travel_date || ''}`;
+    }
+
+    async function loadTicketData() {
+        // Try localStorage first
+        const saved = localStorage.getItem('current_ticket');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                updateTicketUI(parsed);
+            } catch(e) {}
+        }
+
+        // Check if pywebview is available to fetch latest ticket or generate QR if missing
+        if (window.pywebview && window.pywebview.api) {
+            try {
+                const rec = await window.pywebview.api.get_recent_tickets(1);
+                if (rec.ok && rec.tickets && rec.tickets.length > 0) {
+                    const latest = rec.tickets[0];
+                    if (!saved) {
+                        updateTicketUI(latest);
+                    }
+                }
+            } catch(e) {}
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadTicketData);
+    window.addEventListener('pywebviewready', loadTicketData);
+</script>
+
+</body>
+
+</html>

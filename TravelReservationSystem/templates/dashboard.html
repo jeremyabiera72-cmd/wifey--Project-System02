@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        .action-row { display:flex; flex-wrap:wrap; gap:6px; }
+        .action-btn { display:inline-block; padding:8px 10px; border-radius:7px; color:#fff; text-decoration:none; border:0; cursor:pointer; font-size:13px; margin:0; width:auto; }
+        .edit { background:#1677ff; } .cancel { background:#e67e22; } .delete { background:#dc3545; } .ticket { background:#198754; }
+        .action-form { display:inline; }
+        .status { font-weight:bold; }
+        .pending { color:#d68b00; } .confirmed { color:#08752b; } .cancelled { color:#b00000; } .completed { color:#555; }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <div class="dashboard-header">
+        <div>
+            <h1>Travel Reservation System</h1>
+            <p>Welcome, {{ full_name }}!</p>
+        </div>
+        <a class="logout-btn" href="{{ url_for('logout') }}">Logout</a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="message {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="dashboard-card">
+        <h2>Customer Dashboard</h2>
+        <a class="main-btn" href="{{ url_for('reservation') }}">+ Make New Reservation</a>
+    </div>
+
+    <div class="dashboard-card">
+        <h2>My Reservations</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Passenger</th><th>Destination</th><th>Date</th>
+                        <th>Vehicle</th><th>Fare</th><th>Status</th><th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for r in reservations %}
+                    <tr>
+                        <td>{{ r['reservation_id'] }}</td>
+                        <td>{{ r['passenger_name'] }}{% if r['passengers']|int > 1 %} (+{{ r['passengers']|int - 1 }}){% endif %}</td>
+                        <td>{{ r['destination'] }}</td>
+                        <td>{{ r['travel_date'] }}</td>
+                        <td>{{ r['vehicle'] }}</td>
+                        <td>₱{{ '%.2f'|format(r['fare']|float) }}</td>
+                        <td class="status {{ r['status']|lower }}">{{ r['status'] }}</td>
+                        <td>
+                            <div class="action-row">
+                                {% if r['status'] not in ['Cancelled', 'Completed'] %}
+                                    <a class="action-btn edit" href="{{ url_for('edit_reservation', reservation_id=r['reservation_id']) }}">✏ Edit</a>
+                                    <form class="action-form" method="POST" action="{{ url_for('cancel_reservation', reservation_id=r['reservation_id']) }}" onsubmit="return confirm('Cancel this reservation?');">
+                                        <button class="action-btn cancel" type="submit">🚫 Cancel</button>
+                                    </form>
+                                {% endif %}
+                                {% if r['status'] in ['Pending', 'Cancelled'] %}
+                                    <form class="action-form" method="POST" action="{{ url_for('delete_reservation', reservation_id=r['reservation_id']) }}" onsubmit="return confirm('Delete this reservation permanently?');">
+                                        <button class="action-btn delete" type="submit">🗑 Delete</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="8">No reservations yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="dashboard-card">
+        <h2>My Tickets</h2>
+        <p>Each passenger has an individual ticket, seat number, and QR code.</p>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th>Passenger</th><th>Ticket No.</th><th>Vehicle</th><th>Seat</th><th>Status</th><th>Ticket / Receipt</th></tr>
+                </thead>
+                <tbody>
+                {% for t in tickets %}
+                    <tr>
+                        <td>{{ t['passenger_name'] }}</td>
+                        <td>{{ t['ticket_number'] }}</td>
+                        <td>{{ t['vehicle'] }}</td>
+                        <td>{{ t['seat_number'] }}</td>
+                        <td class="status {{ t['status']|lower }}">{{ t['status'] }}</td>
+                        <td><a class="action-btn ticket" href="{{ url_for('view_ticket', ticket_number=t['ticket_number']) }}">🎫 View Ticket</a> <a class="action-btn ticket" href="{{ url_for('view_receipt', ticket_number=t['ticket_number']) }}">🧾 Receipt</a></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="6">No tickets yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Make Reservation</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+
+
+</head>
+
+
+<body>
+
+
+<div class="form-container">
+
+
+    <div class="form-card">
+
+
+        <h1>Make Travel Reservation</h1>
+
+        <p class="subtitle">
+            Enter your travel information
+        </p>
+
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+
+            {% for category, message in messages %}
+
+                <div class="message {{ category }}">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        {% endwith %}
+
+
+
+        <form method="POST">
+
+            <input type="hidden" id="current-user-name" value="{{ session.get('full_name', '') }}">
+
+
+            <h3>Passenger Information</h3>
+
+
+            <label>Number of Passengers</label>
+
+            <input type="number"
+                   name="passengers"
+                   id="passengers"
+                   min="1"
+                   value="1"
+                   required
+                   onchange="generatePassengerFields()"
+                   oninput="generatePassengerFields()">
+
+
+            <div id="passenger-fields">
+
+
+                <div class="passenger-box">
+
+
+                    <label>
+                        Passenger 1 Name
+                    </label>
+
+
+                    <input type="text"
+                           name="passenger_names[]"
+                           value="{{ session.get('full_name', '') }}"
+                           placeholder="Enter passenger name"
+                           required>
+
+
+                </div>
+
+
+            </div>
+
+
+            <label>Contact Number</label>
+
+            <input type="text"
+                   name="contact"
+                   placeholder="09XXXXXXXXX"
+                   required>
+
+
+            <h3>Travel Information</h3>
+
+            <label>Vehicle</label>
+
+
+            <select name="vehicle"
+                    id="vehicle"
+                    required
+                    onchange="updateLocationChoices(); updateVehicleInfo(); updateAutomaticDistance(); updateFare();">
+
+
+                <option value="">
+                    Select Vehicle
+                </option>
+
+
+                {% for vehicle, rate in vehicle_rates.items() %}
+
+                <option value="{{ vehicle }}"
+                        data-rate="{{ rate }}">
+
+                    {{ vehicle }}
+                    - ₱{{ rate }}/km
+
+                </option>
+
+                {% endfor %}
+
+
+            </select>
+
+
+            <div id="vehicle-info"
+                 class="vehicle-info">
+
+
+                <strong>Vehicle Information</strong>
+
+
+                <p id="vehicle-description">
+                    Please select a vehicle.
+                </p>
+
+
+                <p id="vehicle-capacity">
+                </p>
+
+
+                <p id="vehicle-booking-type">
+                </p>
+
+
+            </div>
+
+
+
+
+
+
+            <label for="starting_location">Starting Location</label>
+
+            <select
+                   name="starting_location"
+                   id="starting_location"
+                   required
+                   onchange="updateAutomaticDistance()">
+
+                <option value="">
+                    Select starting location
+                </option>
+
+            </select>
+
+
+            <div id="origin-field">
+            <label for="origin">Origin</label>
+
+            <select
+                   name="origin"
+                   id="origin"
+                   required
+                   onchange="updateLandDestinations(); updateAutomaticDistance();">
+
+                <option value="">
+                    Select origin
+                </option>
+
+            </select>
+            </div>
+
+
+            <label for="destination">Destination</label>
+
+            <select
+                   name="destination"
+                   id="destination"
+                   required
+                   onchange="updateAutomaticDistance();">
+
+                <option value="">
+                    Select destination
+                </option>
+
+            </select>
+
+
+            <p id="location-type-note"
+               style="margin:-4px 0 14px;font-size:13px;color:#64748b;">
+                Select a vehicle to load the correct Mindanao locations.
+            </p>
+
+
+            <label>Travel Date</label>
+
+            <input type="date"
+                   name="travel_date"
+                   required>
+
+
+
+            <label>Travel Time</label>
+
+            <input type="time"
+                   name="travel_time"
+                   required>
+
+
+            <label>Distance (km)</label>
+
+
+            <input type="number"
+                   name="distance"
+                   id="distance"
+                   min="1"
+                   step="0.1"
+                   placeholder="Automatic"
+                   readonly
+                   required>
+
+            <p style="margin:-4px 0 14px;font-size:13px;color:#64748b;">
+                Distance is calculated automatically from Starting Point to Destination.
+            </p>
+
+
+            <div class="fare-box">
+                <div>Fare per passenger: <strong id="fare">₱0.00</strong></div>
+                <div style="margin-top:8px;">Passengers: <strong id="fare-passengers">1</strong></div>
+                <div style="margin-top:10px;font-size:18px;">Total Fare: <strong id="total-fare">₱0.00</strong></div>
+            </div>
+
+
+            <div class="vehicle-info">
+
+
+                <strong>Automatic Seat Assignment</strong>
+
+
+                <p>
+                    The system will automatically assign
+                    available seats after you submit the reservation.
+                </p>
+
+
+                <p>
+                    A seat already assigned to another passenger
+                    for the same trip cannot be assigned again.
+                </p>
+
+
+            </div>
+
+
+            <button type="submit">
+                Confirm Reservation
+            </button>
+
+
+        </form>
+
+
+        <p class="back-link">
+
+            <a href="{{ url_for('dashboard') }}">
+                ← Back to Dashboard
+            </a>
+
+        </p>
+
+
+    </div>
+
+</div>
+
+
+
+<script type="application/json" id="location-data">
+{
+    "land": {{ land_locations|tojson }},
+    "airport": {{ airport_locations|tojson }},
+    "port": {{ port_locations|tojson }},
+    "vehicleTypes": {{ vehicle_location_types|tojson }},
+    "coordinates": {{ location_coordinates|tojson }},
+    "barangays": {{ barangays_by_city|tojson }},
+    "terminals": {{ terminals_by_city|tojson }}
+}
+</script>
+
+<script>
+const locationData = JSON.parse(document.getElementById("location-data").textContent);
+const LAND_LOCATIONS = locationData.land || [];
+const AIRPORT_LOCATIONS = locationData.airport || [];
+const PORT_LOCATIONS = locationData.port || [];
+const VEHICLE_LOCATION_TYPES = locationData.vehicleTypes || {};
+const BARANGAYS_BY_CITY = locationData.barangays || {};
+const TERMINALS_BY_CITY = locationData.terminals || {};
+const COORDINATES = locationData.coordinates || {};
+
+function fillLocationSelect(id, locations, placeholder) {
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = ""; first.textContent = placeholder; select.appendChild(first);
+    (locations || []).forEach(function(location) {
+        const option = document.createElement("option");
+        option.value = location; option.textContent = location; select.appendChild(option);
+    });
+}
+
+function setLocationEnabled(enabled) {
+    ["starting_location", "origin", "destination"].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = !enabled;
+    });
+}
+
+function updateLocationChoices() {
+    const vehicle = document.getElementById("vehicle")?.value || "";
+    const type = VEHICLE_LOCATION_TYPES[vehicle];
+    const originField = document.getElementById("origin-field");
+    const origin = document.getElementById("origin");
+    const note = document.getElementById("location-type-note");
+    setLocationEnabled(!!type);
+    if (!type) {
+        if (originField) originField.style.display = "block";
+        if (origin) origin.required = true;
+        fillLocationSelect("starting_location", [], "Select vehicle first");
+        fillLocationSelect("origin", [], "Select vehicle first");
+        fillLocationSelect("destination", [], "Select vehicle first");
+        if (note) note.textContent = "Select a vehicle first to load the correct locations.";
+        document.getElementById("distance").value = ""; updateFare(); return;
+    }
+    fillLocationSelect("starting_location", LAND_LOCATIONS, "Select starting municipality/city");
+    if (type === "air" || type === "sea") {
+        if (originField) originField.style.display = "none";
+        if (origin) { origin.required = false; origin.value = ""; }
+        fillLocationSelect("destination", type === "air" ? AIRPORT_LOCATIONS : PORT_LOCATIONS, type === "air" ? "Select destination airport" : "Select destination port");
+        if (note) note.textContent = type === "air" ? "Airplane: Starting Point → Destination Airport." : "Ferry: Starting Point → Destination Port.";
+    } else {
+        if (originField) originField.style.display = "block";
+        if (origin) origin.required = true;
+        fillLocationSelect("origin", LAND_LOCATIONS, "Select origin municipality/city");
+        updateLandDestinations();
+        if (note) note.textContent = "Land vehicle: Destination depends on the selected Origin.";
+    }
+    updateAutomaticDistance();
+}
+
+function updateLandDestinations() {
+    const vehicle = document.getElementById("vehicle")?.value || "";
+    const origin = document.getElementById("origin")?.value || "";
+    const type = VEHICLE_LOCATION_TYPES[vehicle];
+    let destinations = [];
+    if (origin && type === "land") {
+        destinations = (vehicle === "Bus" || vehicle === "Van") ? (TERMINALS_BY_CITY[origin] || []) : (BARANGAYS_BY_CITY[origin] || []);
+    }
+    fillLocationSelect("destination", destinations, origin ? "Select destination" : "Select origin first");
+    updateAutomaticDistance();
+}
+
+function normalizeCoordinate(value) {
+    if (!value) return null;
+
+    // Flask/Jinja serializes Python tuples as JSON arrays: [latitude, longitude].
+    if (Array.isArray(value) && value.length >= 2) {
+        const lat = Number(value[0]);
+        const lon = Number(value[1]);
+        return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null;
+    }
+
+    // Also accept coordinates represented as an object.
+    if (typeof value === "object") {
+        const lat = Number(value.lat ?? value.latitude);
+        const lon = Number(value.lon ?? value.lng ?? value.longitude);
+        return Number.isFinite(lat) && Number.isFinite(lon) ? [lat, lon] : null;
+    }
+
+    return null;
+}
+
+function getCoordinate(name) {
+    if (!name) return null;
+
+    // Exact match first.
+    if (Object.prototype.hasOwnProperty.call(COORDINATES, name)) {
+        const exact = normalizeCoordinate(COORDINATES[name]);
+        if (exact) return exact;
+    }
+
+    // Case/spacing-insensitive match as a safety net.
+    const wanted = String(name).trim().toLowerCase().replace(/\s+/g, " ");
+    for (const [key, value] of Object.entries(COORDINATES)) {
+        const normalizedKey = String(key).trim().toLowerCase().replace(/\s+/g, " ");
+        if (normalizedKey === wanted) {
+            const found = normalizeCoordinate(value);
+            if (found) return found;
+        }
+    }
+
+    return null;
+}
+
+function haversineKm(a, b) {
+    if (!a || !b) return null;
+    const radians = degrees => degrees * Math.PI / 180;
+    const lat1 = radians(a[0]);
+    const lat2 = radians(b[0]);
+    const dLat = radians(b[0] - a[0]);
+    const dLon = radians(b[1] - a[1]);
+    const h = Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    const safeH = Math.max(0, Math.min(1, h));
+    return 6371.0088 * 2 * Math.atan2(Math.sqrt(safeH), Math.sqrt(1 - safeH));
+}
+
+function updateAutomaticDistance() {
+    const vehicle = document.getElementById("vehicle")?.value || "";
+    const starting = document.getElementById("starting_location")?.value || "";
+    const origin = document.getElementById("origin")?.value || "";
+    const destination = document.getElementById("destination")?.value || "";
+    const distanceInput = document.getElementById("distance");
+
+    if (!distanceInput) {
+        console.error("Distance input not found. Check id=\"distance\".");
+        return;
+    }
+
+    distanceInput.value = "";
+
+    if (!vehicle || !starting || !destination) {
+        updateFare();
+        return;
+    }
+
+    const type = VEHICLE_LOCATION_TYPES[vehicle];
+    const startCoordinates = getCoordinate(starting);
+
+    // For land vehicles, Destination is chosen from the selected Origin's
+    // terminal/barangay list. Use its coordinates; if unavailable, fall back
+    // to the Origin city coordinates. Air/sea vehicles use airport/port coords.
+    let destinationCoordinates = getCoordinate(destination);
+    if (!destinationCoordinates && type === "land") {
+        destinationCoordinates = getCoordinate(origin);
+    }
+
+    const km = haversineKm(startCoordinates, destinationCoordinates);
+    if (km !== null && Number.isFinite(km) && km > 0) {
+        distanceInput.value = km.toFixed(1);
+    }
+
+    updateFare();
+}
+
+function updateFare() {
+    const vehicle = document.getElementById("vehicle");
+    const distanceInput = document.getElementById("distance");
+    const passengersInput = document.getElementById("passengers");
+    const fareDisplay = document.getElementById("fare");
+    const totalFareDisplay = document.getElementById("total-fare");
+    const farePassengersDisplay = document.getElementById("fare-passengers");
+
+    if (!vehicle || !distanceInput || !fareDisplay) return;
+
+    const selectedOption = vehicle.options[vehicle.selectedIndex];
+    const rate = Number(selectedOption?.getAttribute("data-rate") || 0);
+    const km = Number(distanceInput.value || 0);
+    const passengers = Math.max(1, parseInt(passengersInput?.value || "1", 10));
+
+    const farePerPassenger = rate > 0 && km > 0 ? rate * km : 0;
+    const totalFare = farePerPassenger * passengers;
+
+    fareDisplay.textContent = "₱" + farePerPassenger.toLocaleString("en-PH", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    if (totalFareDisplay) {
+        totalFareDisplay.textContent = "₱" + totalFare.toLocaleString("en-PH", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    if (farePassengersDisplay) farePassengersDisplay.textContent = passengers;
+}
+
+function updateVehicleInfo() {
+    const vehicle = document.getElementById("vehicle")?.value || "";
+    const info = {
+        "Bus": ["Bus seat reservation.", "Maximum capacity: 45 passengers.", "Booking type: Seat Reservation."],
+        "Van": ["Van seat reservation.", "Maximum capacity: 12 passengers.", "Booking type: Seat Reservation."],
+        "Taxi": ["Taxi ride reservation.", "Maximum capacity: 4 passengers.", "Booking type: Ride Reservation."],
+        "Motor": ["Motorcycle ride reservation.", "Maximum capacity: 1 passenger.", "Booking type: Ride Reservation."],
+        "Airplane": ["Airplane ticket reservation.", "Maximum capacity: 180 passengers.", "Booking type: Ticket Reservation."],
+        "Ferry": ["Ferry/Barko ticket reservation.", "Maximum capacity: 57 passengers.", "Booking type: Ticket Reservation."]
+    }[vehicle];
+    document.getElementById("vehicle-description").textContent = info ? info[0] : "Please select a vehicle.";
+    document.getElementById("vehicle-capacity").textContent = info ? info[1] : "";
+    document.getElementById("vehicle-booking-type").textContent = info ? info[2] : "";
+}
+
+function generatePassengerFields() {
+    const input = document.getElementById("passengers");
+    const container = document.getElementById("passenger-fields");
+    let count = Math.max(1, parseInt(input.value || "1", 10));
+    container.innerHTML = "";
+    const currentName = document.getElementById("current-user-name")?.value || "";
+    for (let i = 1; i <= count; i++) {
+        const box = document.createElement("div"); box.className = "passenger-box";
+        const label = document.createElement("label"); label.textContent = "Passenger " + i + " Name";
+        const field = document.createElement("input"); field.type = "text"; field.name = "passenger_names[]"; field.placeholder = "Enter passenger " + i + " name"; field.required = true; if (i === 1) field.value = currentName;
+        box.appendChild(label); box.appendChild(field); container.appendChild(box);
+    }
+    updateFare();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const vehicle = document.getElementById("vehicle");
+    const starting = document.getElementById("starting_location");
+    const origin = document.getElementById("origin");
+    const destination = document.getElementById("destination");
+    const passengers = document.getElementById("passengers");
+
+    if (vehicle) {
+        vehicle.addEventListener("change", function() {
+            updateLocationChoices();
+            updateVehicleInfo();
+            updateAutomaticDistance();
+        });
+    }
+    if (starting) starting.addEventListener("change", updateAutomaticDistance);
+    if (origin) origin.addEventListener("change", function() {
+        updateLandDestinations();
+        updateAutomaticDistance();
+    });
+    if (destination) destination.addEventListener("change", updateAutomaticDistance);
+    if (passengers) {
+        passengers.addEventListener("input", function() {
+            generatePassengerFields();
+            updateFare();
+        });
+        passengers.addEventListener("change", function() {
+            generatePassengerFields();
+            updateFare();
+        });
+    }
+
+    generatePassengerFields();
+    updateVehicleInfo();
+    updateLocationChoices();
+    updateAutomaticDistance();
+    updateFare();
+});
+</script>
+
+</body>
+</html>
