@@ -1581,7 +1581,14 @@ def edit_reservation(reservation_id):
         passenger_names=saved_names,
         vehicle_rates=VEHICLE_RATES,
         vehicle_limits=VEHICLE_LIMITS,
-        vehicle_capacity=VEHICLE_CAPACITY
+        vehicle_capacity=VEHICLE_CAPACITY,
+        land_locations=LAND_LOCATIONS,
+        airport_locations=AIRPORT_LOCATIONS,
+        port_locations=PORT_LOCATIONS,
+        vehicle_location_types=VEHICLE_LOCATION_TYPES,
+        location_coordinates=LOCATION_COORDINATES,
+        barangays_by_city=BARANGAYS_BY_CITY,
+        terminals_by_city=TERMINALS_BY_CITY
     )
 
 
