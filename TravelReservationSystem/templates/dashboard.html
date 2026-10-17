@@ -39,18 +39,20 @@
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th><th>Passenger</th><th>Destination</th><th>Date</th>
-                        <th>Vehicle</th><th>Fare</th><th>Status</th><th>Actions</th>
+                        <th>ID</th><th>Booking Ref</th><th>Passenger</th><th>Destination</th><th>Date</th>
+                        <th>Vehicle</th><th>V. Code</th><th>Fare</th><th>Status</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                 {% for r in reservations %}
                     <tr>
                         <td>{{ r['reservation_id'] }}</td>
+                        <td style="font-family:monospace;font-size:12px">{{ r['booking_reference'] or '—' }}</td>
                         <td>{{ r['passenger_name'] }}{% if r['passengers']|int > 1 %} (+{{ r['passengers']|int - 1 }}){% endif %}</td>
                         <td>{{ r['destination'] }}</td>
                         <td>{{ r['travel_date'] }}</td>
                         <td>{{ r['vehicle'] }}</td>
+                        <td style="font-family:monospace;font-weight:700">{{ r['vehicle_code'] or '—' }}</td>
                         <td>₱{{ '%.2f'|format(r['fare']|float) }}</td>
                         <td class="status {{ r['status']|lower }}">{{ r['status'] }}</td>
                         <td>
@@ -70,7 +72,7 @@
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="8">No reservations yet.</td></tr>
+                    <tr><td colspan="10">No reservations yet.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -83,14 +85,15 @@
         <div class="table-container">
             <table>
                 <thead>
-                    <tr><th>Passenger</th><th>Ticket No.</th><th>Vehicle</th><th>Seat</th><th>Status</th><th>Ticket / Receipt</th></tr>
+                    <tr><th>Passenger</th><th>Ticket No.</th><th>Vehicle</th><th>V. Code</th><th>Seat</th><th>Status</th><th>Ticket / Receipt</th></tr>
                 </thead>
                 <tbody>
                 {% for t in tickets %}
                     <tr>
                         <td>{{ t['passenger_name'] }}</td>
-                        <td>{{ t['ticket_number'] }}</td>
+                        <td style="font-family:monospace;font-size:12px">{{ t['ticket_number'] }}</td>
                         <td>{{ t['vehicle'] }}</td>
+                        <td style="font-family:monospace;font-weight:700;color:#1677ff">{{ t['vehicle_code'] or '—' }}</td>
                         <td>{{ t['seat_number'] }}</td>
                         <td class="status {{ t['status']|lower }}">{{ t['status'] }}</td>
                         <td><a class="action-btn ticket" href="{{ url_for('view_ticket', ticket_number=t['ticket_number']) }}">🎫 View Ticket</a> <a class="action-btn ticket" href="{{ url_for('view_receipt', ticket_number=t['ticket_number']) }}">🧾 Receipt</a></td>

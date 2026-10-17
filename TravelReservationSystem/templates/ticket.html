@@ -827,6 +827,55 @@
                     <div>
 
                         <span class="label">
+                            VEHICLE CODE NO.
+                        </span>
+
+                        <div class="value" style="font-family:monospace;color:#1976d2;letter-spacing:2px">
+
+                            {% if ticket.vehicle_code %}
+                                {{ ticket.vehicle_code }}
+                            {% else %}
+                                <span style="color:#94a3b8;font-size:13px;font-style:italic">Pending Assignment</span>
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            BOOKING REFERENCE
+                        </span>
+
+                        <div class="value" style="font-family:monospace;font-size:14px">
+
+                            {{ reservation.booking_reference if reservation and reservation.booking_reference else '—' }}
+
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
+                            PASSENGERS
+                        </span>
+
+                        <div class="value">
+
+                            {{ ticket.passengers or 1 }}
+
+                        </div>
+
+                    </div>
+
+
+                    <div>
+
+                        <span class="label">
                             BOOKING TYPE
                         </span>
 
@@ -949,6 +998,12 @@
 
 
 <div class="note">
+
+    {% if ticket.status == 'Pending' %}
+    <div style="background:#fff3cd;border:1px solid #f59e0b;border-radius:10px;padding:12px 18px;margin-bottom:14px;color:#78350f;font-weight:600">
+        ⏳ This ticket is <strong>Awaiting Confirmation</strong>. Present this ticket to staff for verification. The vehicle code will be assigned once an administrator confirms your reservation.
+    </div>
+    {% endif %}
 
     The QR code opens the live verification page.
 

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Vehicle Type Pricing — Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
+        .form-wrap{width:100%;max-width:500px}
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:#64748b;text-decoration:none;font-size:13px;margin-bottom:20px;transition:.15s}
+        .back-link:hover{color:#94a3b8}
+        .card{background:#1e293b;border:1px solid #334155;border-radius:16px;overflow:hidden}
+        .card-header{background:linear-gradient(135deg,#1e3a5f,#1e293b);padding:24px 28px;border-bottom:1px solid #334155}
+        .card-header h1{font-size:18px;font-weight:800;color:#f1f5f9}
+        .card-header p{font-size:13px;color:#64748b;margin-top:4px}
+        .card-body{padding:28px}
+        .field-group{margin-bottom:20px}
+        label{display:block;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+        input,select{width:100%;background:#0f172a;border:1px solid #334155;border-radius:9px;color:#e2e8f0;padding:10px 14px;font-size:14px;font-family:inherit;transition:.15s;outline:none}
+        input:focus,select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px #3b82f620}
+        select option{background:#0f172a}
+        .field-hint{font-size:12px;color:#475569;margin-top:5px}
+        .fare-section{padding:16px;border:1px solid #334155;border-radius:10px;background:#0f172a;margin-bottom:20px}
+        .fare-section.active{border-color:#3b82f6}
+        .radio-label{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #334155;border-radius:9px;cursor:pointer;font-size:14px;margin-bottom:8px;transition:.15s}
+        .radio-label:hover{border-color:#3b82f6}
+        .radio-label input[type=radio]{width:auto;margin:0}
+        .btn-row{display:flex;gap:10px;margin-top:28px}
+        .btn{padding:11px 22px;border-radius:9px;font-size:14px;font-weight:700;border:0;cursor:pointer;text-decoration:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+        .btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
+        .btn-ghost{background:#334155;color:#94a3b8}.btn-ghost:hover{background:#475569;color:#e2e8f0}
+    </style>
+    <script>
+        function updateFareFields() {
+            const fareType = document.querySelector('input[name="fare_type"]:checked').value;
+            document.getElementById('distance-fields').style.display = fareType === 'distance' ? 'block' : 'none';
+            document.getElementById('fixed-fields').style.display = fareType === 'fixed' ? 'block' : 'none';
+        }
+        window.addEventListener('DOMContentLoaded', updateFareFields);
+    </script>
+</head>
+<body>
+<div class="form-wrap">
+    <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Back to Dashboard</a>
+
+    <div class="card">
+        <div class="card-header">
+            <h1>⚙️ Edit Pricing — {{ vt['type_name'] }}</h1>
+            <p>Configure the fare type, rate, and passenger capacity for this vehicle type.</p>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+
+                <div class="field-group">
+                    <label>Fare Calculation Mode</label>
+                    <label class="radio-label">
+                        <input type="radio" name="fare_type" value="distance"
+                               {% if vt['fare_type'] == 'distance' %}checked{% endif %}
+                               onchange="updateFareFields()">
+                        📏 <strong>Distance-based</strong> — Rate per kilometer × passengers
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="fare_type" value="fixed"
+                               {% if vt['fare_type'] == 'fixed' %}checked{% endif %}
+                               onchange="updateFareFields()">
+                        📌 <strong>Fixed Fare</strong> — Flat rate per booking (e.g., charter)
+                    </label>
+                </div>
+
+                <div id="distance-fields">
+                    <div class="field-group">
+                        <label>Rate per Kilometer (₱)</label>
+                        <input type="number" name="rate_per_km" step="0.01" min="0"
+                               value="{{ '%.2f'|format(vt['rate_per_km']|float) }}"
+                               placeholder="e.g. 2.22">
+                        <p class="field-hint">Fare = distance × rate × passengers</p>
+                    </div>
+                </div>
+
+                <div id="fixed-fields" style="display:none">
+                    <div class="field-group">
+                        <label>Fixed Fare Amount (₱)</label>
+                        <input type="number" name="fixed_fare" step="0.01" min="0"
+                               value="{{ '%.2f'|format(vt['fixed_fare']|float) }}"
+                               placeholder="e.g. 1500.00">
+                        <p class="field-hint">One flat price charged per reservation regardless of distance.</p>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label>Maximum Passengers per Booking</label>
+                    <input type="number" name="max_passengers" min="1" max="500"
+                           value="{{ vt['max_passengers'] }}" required>
+                </div>
+
+                <div class="btn-row">
+                    <button type="submit" class="btn btn-primary">💾 Save Pricing</button>
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-ghost">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

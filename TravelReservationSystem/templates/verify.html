@@ -17,168 +17,147 @@
     >
 
     <title>
-        Ticket Verification
+        Ticket Verification — Travel Reservation System
     </title>
 
 
     <style>
 
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-
             margin: 0;
-
-            background: #eef2f6;
-
-            font-family:
-                Arial,
-                sans-serif;
-
+            background: #0f172a;
+            font-family: 'Inter', Arial, sans-serif;
             color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 48px 16px 40px;
         }
 
 
         .card {
-
             max-width: 520px;
-
-            margin:
-                55px auto;
-
+            width: 100%;
             background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,.35);
+        }
 
-            border-radius: 18px;
-
-            padding: 30px;
-
-            box-shadow:
-                0 10px 30px
-                rgba(0,0,0,.12);
-
+        .card-header {
+            padding: 28px 28px 22px;
             text-align: center;
         }
 
+        .card-header.valid   { background: linear-gradient(135deg,#059669,#047857); color: white; }
+        .card-header.pending { background: linear-gradient(135deg,#d97706,#b45309); color: white; }
+        .card-header.invalid { background: linear-gradient(135deg,#dc2626,#b91c1c); color: white; }
+        .card-header.cancelled { background: linear-gradient(135deg,#64748b,#475569); color: white; }
+        .card-header.completed { background: linear-gradient(135deg,#2563eb,#1d4ed8); color: white; }
 
-        .icon {
+        .card-icon { font-size: 48px; display: block; margin-bottom: 10px; }
 
-            font-size: 50px;
-        }
+        .card-header h1 { font-size: 22px; font-weight: 800; margin: 0; }
+        .card-header p  { font-size: 13px; opacity: .85; margin-top: 5px; }
 
-
-        .ok {
-
-            color: #067647;
-        }
-
-
-        .bad {
-
-            color: #b42318;
-        }
-
-
-        .status {
-
+        .status-badge {
             display: inline-block;
-
-            padding:
-                9px 16px;
-
+            margin-top: 14px;
+            padding: 6px 20px;
             border-radius: 999px;
-
             font-weight: 800;
-
-            background: #e2e8f0;
+            font-size: 13px;
+            background: rgba(255,255,255,.2);
+            border: 1.5px solid rgba(255,255,255,.35);
+            letter-spacing: .5px;
         }
 
-
-        .pending {
-
-            background: #fff3cd;
-
-            color: #856404;
-        }
-
-
-        .confirmed {
-
-            background: #d1fae5;
-
-            color: #065f46;
-        }
-
-
-        .cancelled {
-
-            background: #fee2e2;
-
-            color: #991b1b;
-        }
-
-
-        .completed {
-
-            background: #dbeafe;
-
-            color: #1e40af;
-        }
-
+        .card-body { padding: 24px 28px; }
 
         .row {
-
             display: flex;
-
-            justify-content:
-                space-between;
-
-            border-bottom:
-                1px solid #e5e7eb;
-
-            padding: 11px 0;
-
-            text-align: left;
+            justify-content: space-between;
+            align-items: baseline;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 0;
         }
 
+        .row:last-child { border-bottom: 0; }
 
-        .row:last-child {
-
-            border-bottom: 0;
-        }
-
-
-        .label {
-
+        .lbl {
             color: #64748b;
-
             font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
         }
 
-
-        .value {
-
+        .val {
             font-weight: 700;
-
             text-align: right;
+            color: #0f172a;
+            font-size: 14px;
         }
 
+        .vehicle-code-val {
+            font-family: monospace;
+            font-size: 20px;
+            font-weight: 900;
+            color: #2563eb;
+            letter-spacing: 3px;
+        }
+
+        .ref-val {
+            font-family: monospace;
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .warn-box {
+            background: #fff3cd;
+            border: 1px solid #f59e0b;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #78350f;
+            font-weight: 600;
+            margin-top: 16px;
+            text-align: center;
+        }
 
         .btn {
-
             display: inline-block;
-
             margin-top: 20px;
-
-            background: #1976d2;
-
-            color: white;
-
-            text-decoration: none;
-
-            padding:
-                11px 18px;
-
-            border-radius: 8px;
-
+            padding: 11px 22px;
+            border-radius: 9px;
             font-weight: 700;
+            font-size: 14px;
+            text-decoration: none;
+            background: #1e293b;
+            color: white;
+            width: 100%;
+            text-align: center;
+            transition: .15s;
+        }
+
+        .btn:hover { background: #334155; }
+
+        .not-found-body {
+            padding: 32px 28px;
+            text-align: center;
+        }
+
+        .not-found-body h1 { font-size: 20px; color: #b91c1c; margin: 12px 0 8px; }
+        .not-found-body p { font-size: 14px; color: #64748b; }
+
+        @media(max-width:480px) {
+            body { padding: 20px 10px; }
+            .card-body { padding: 18px; }
         }
 
     </style>
@@ -194,168 +173,119 @@
 
 {% if ticket %}
 
+    {% set s = ticket.status|lower %}
 
-    <div class="icon">
-
-        ✅
-
-    </div>
-
-
-    <h1>
-
-        Ticket Verified
-
-    </h1>
-
-
-    <p>
-
-        This page reads the current
-
-        reservation status from the
-
-        database.
-
-    </p>
-
-
-    <!-- CURRENT STATUS -->
-
-    <div class="
-        status
-        {{ ticket.status|lower }}
+    <div class="card-header
+        {% if s == 'confirmed' %}valid
+        {% elif s == 'pending' %}pending
+        {% elif s == 'cancelled' %}cancelled
+        {% elif s == 'completed' %}completed
+        {% else %}invalid{% endif %}
     ">
 
-        {{ ticket.status|upper }}
+        <span class="card-icon">
+            {% if s == 'confirmed' %}✅
+            {% elif s == 'pending' %}⏳
+            {% elif s == 'cancelled' %}❌
+            {% elif s == 'completed' %}🏁
+            {% else %}⚠️{% endif %}
+        </span>
+
+        <h1>Ticket
+            {% if s == 'confirmed' %}Verified
+            {% elif s == 'pending' %}Awaiting Confirmation
+            {% elif s == 'cancelled' %}Cancelled
+            {% elif s == 'completed' %}Completed
+            {% else %}Unverified{% endif %}
+        </h1>
+
+        <p>Live status from the reservation database</p>
+
+        <div class="status-badge">{{ ticket.status|upper }}</div>
 
     </div>
 
 
-
-    <div style="margin-top:20px">
-
+    <div class="card-body">
 
         <div class="row">
-
-            <span class="label">
-                Ticket No.
-            </span>
-
-            <span class="value">
-
-                {{ ticket.ticket_number }}
-
-            </span>
-
+            <span class="lbl">Ticket No.</span>
+            <span class="val" style="font-family:monospace">{{ ticket.ticket_number }}</span>
         </div>
 
+        {% if ticket.booking_reference %}
+        <div class="row">
+            <span class="lbl">Booking Ref</span>
+            <span class="val ref-val">{{ ticket.booking_reference }}</span>
+        </div>
+        {% endif %}
 
         <div class="row">
-
-            <span class="label">
-                Passenger
-            </span>
-
-            <span class="value">
-
-                {{ ticket.passenger_name }}
-
-            </span>
-
+            <span class="lbl">Passenger</span>
+            <span class="val">{{ ticket.passenger_name }}</span>
         </div>
 
-
         <div class="row">
-
-            <span class="label">
-                Vehicle
-            </span>
-
-            <span class="value">
-
-                {{ ticket.vehicle }}
-
-            </span>
-
+            <span class="lbl">Vehicle Type</span>
+            <span class="val">{{ ticket.vehicle }}</span>
         </div>
 
-
         <div class="row">
-
-            <span class="label">
-                Route
-            </span>
-
-            <span class="value">
-
-                {{ ticket.origin }}
-
-                →
-
-                {{ ticket.destination }}
-
-            </span>
-
-        </div>
-
-
-        <div class="row">
-
-            <span class="label">
-                Date / Time
-            </span>
-
-            <span class="value">
-
-                {{ ticket.travel_date }}
-
-                /
-
-                {{ ticket.travel_time }}
-
-            </span>
-
-        </div>
-
-
-        <div class="row">
-
-            <span class="label">
-                Seat
-            </span>
-
-            <span class="value">
-
-                {% if ticket.seat_number %}
-
-                    {{ ticket.seat_number }}
-
+            <span class="lbl">Vehicle Code No.</span>
+            <span class="val">
+                {% if ticket.vehicle_code %}
+                    <span class="vehicle-code-val">{{ ticket.vehicle_code }}</span>
                 {% else %}
-
-                    Ride reservation
-
+                    <span style="color:#94a3b8;font-style:italic;font-size:13px">Not yet assigned</span>
                 {% endif %}
-
             </span>
-
         </div>
-
 
         <div class="row">
-
-            <span class="label">
-                Fare
-            </span>
-
-            <span class="value">
-
-                ₱{{ "%.2f"|format(ticket.fare) }}
-
-            </span>
-
+            <span class="lbl">Route</span>
+            <span class="val">{{ ticket.origin }} → {{ ticket.destination }}</span>
         </div>
 
+        <div class="row">
+            <span class="lbl">Date / Time</span>
+            <span class="val">{{ ticket.travel_date }} / {{ ticket.travel_time }}</span>
+        </div>
+
+        <div class="row">
+            <span class="lbl">Seat / Type</span>
+            <span class="val">
+                {% if ticket.seat_number %}
+                    {{ ticket.seat_number }}
+                {% else %}
+                    Ride Reservation
+                {% endif %}
+            </span>
+        </div>
+
+        {% if ticket.passengers and ticket.passengers|int > 1 %}
+        <div class="row">
+            <span class="lbl">Passengers</span>
+            <span class="val">{{ ticket.passengers }}</span>
+        </div>
+        {% endif %}
+
+        <div class="row">
+            <span class="lbl">Fare</span>
+            <span class="val" style="color:#059669">₱{{ "%.2f"|format(ticket.fare) }}</span>
+        </div>
+
+        {% if ticket.status == 'Pending' %}
+        <div class="warn-box">
+            ⏳ This reservation is <strong>pending confirmation</strong> by the administrator.
+            Vehicle code will be assigned upon confirmation.
+        </div>
+        {% endif %}
+
+        {% if ticket.status == 'Cancelled' %}
+        <div class="warn-box" style="background:#fee2e2;border-color:#dc2626;color:#991b1b">
+            ❌ This reservation has been <strong>cancelled</strong> and is no longer valid.
+        </div>
+        {% endif %}
 
     </div>
 
@@ -363,31 +293,16 @@
 {% else %}
 
 
-    <div class="icon">
-
-        ❌
-
+    <div class="card-header invalid">
+        <span class="card-icon">❌</span>
+        <h1>Ticket Not Found</h1>
+        <p>This QR code does not match any ticket in the system.</p>
     </div>
 
-
-    <h1 class="bad">
-
-        Ticket Not Found
-
-    </h1>
-
-
-    <p>
-
-        The ticket number
-
-        <strong>
-            {{ ticket_number }}
-        </strong>
-
-        does not exist in the database.
-
-    </p>
+    <div class="not-found-body">
+        <p>Ticket number <strong>{{ ticket_number }}</strong> does not exist in the database.</p>
+        <p style="margin-top:8px;font-size:12px">Please ensure the QR code is scanned correctly or contact system administration.</p>
+    </div>
 
 
 {% endif %}

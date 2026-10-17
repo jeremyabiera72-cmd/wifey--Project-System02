@@ -5,7 +5,12 @@
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: #eef4f8;
+    min-height: 100vh;
+    background: linear-gradient(
+        rgba(0, 0, 0, 0.60),
+        rgba(0, 0, 0, 0.60)
+    ),
+    url("/static/assets/Background.jpg") center center / cover no-repeat fixed;
 }
 
 .login-container {
@@ -16,13 +21,18 @@ body {
     padding: 20px;
 }
 
+/* Glassmorphic Login Card */
 .login-card {
     width: 100%;
     max-width: 430px;
-    background: white;
+    background: rgba(30, 30, 30, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
     padding: 35px;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 h1 {
@@ -32,7 +42,7 @@ h1 {
 
 .subtitle {
     text-align: center;
-    color: #777;
+    color: #aaa;
     margin-bottom: 25px;
 }
 
@@ -41,14 +51,21 @@ label {
     margin-top: 15px;
     margin-bottom: 6px;
     font-weight: bold;
+    color: #ddd;
 }
 
 input {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     font-size: 15px;
+    background: rgba(20, 20, 20, 0.6);
+    color: #fff;
+}
+
+input::placeholder {
+    color: #888;
 }
 
 button {
@@ -71,10 +88,11 @@ button:hover {
 .register-text {
     text-align: center;
     margin-top: 20px;
+    color: #ccc;
 }
 
 a {
-    color: #1677ff;
+    color: #4da6ff;
     text-decoration: none;
 }
 
@@ -86,17 +104,18 @@ a {
 }
 
 .message.error {
-    background: #ffe1e1;
-    color: #b00000;
+    background: rgba(176, 0, 0, 0.3);
+    color: #ff9999;
+    border: 1px solid rgba(176, 0, 0, 0.5);
 }
 
 .message.success {
-    background: #def8e5;
-    color: #08752b;
+    background: rgba(8, 117, 43, 0.3);
+    color: #99ffbb;
+    border: 1px solid rgba(8, 117, 43, 0.5);
 }
 
 @media (max-width: 500px) {
-
     .login-card {
         padding: 25px 20px;
     }
@@ -106,21 +125,31 @@ a {
     }
 }
 
-
 .dashboard {
     min-height: 100vh;
     padding: 30px;
+    color: #ffffff;
+}
+
+/* Glassmorphic Dashboard Header & Cards */
+.dashboard-header,
+.dashboard-card {
+    background: rgba(30, 30, 30, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 25px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 .dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: white;
     padding: 20px 25px;
-    border-radius: 15px;
-    margin-bottom: 25px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
 }
 
 .dashboard-header h1 {
@@ -128,12 +157,10 @@ a {
     margin: 0;
 }
 
-.dashboard-card {
-    background: white;
-    padding: 25px;
-    border-radius: 15px;
-    margin-bottom: 25px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+.dashboard-card p,
+.dashboard-card span,
+.dashboard-card div {
+    color: #ddd;
 }
 
 .main-btn,
@@ -159,19 +186,20 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 15px;
+    color: #fff;
 }
 
 th,
 td {
     padding: 12px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     text-align: left;
 }
 
 th {
-    background: #f2f6fa;
+    background: rgba(50, 50, 50, 0.8);
+    color: #fff;
 }
-
 
 .form-container {
     min-height: 100vh;
@@ -180,13 +208,18 @@ th {
     justify-content: center;
 }
 
+/* Glassmorphic Form Card */
 .form-card {
     width: 100%;
     max-width: 650px;
-    background: white;
+    background: rgba(30, 30, 30, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
     padding: 30px;
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 .form-card h1 {
@@ -195,26 +228,29 @@ th {
 
 .form-card h3 {
     margin-top: 25px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     padding-bottom: 8px;
 }
 
 select {
     width: 100%;
     padding: 12px;
-    border: 1px solid #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
     font-size: 15px;
-    background: white;
+    background: rgba(20, 20, 20, 0.8);
+    color: white;
 }
 
 .fare-box {
     margin-top: 20px;
     padding: 18px;
-    background: #eef6ff;
+    background: rgba(22, 119, 255, 0.15);
+    border: 1px solid rgba(22, 119, 255, 0.3);
     border-radius: 10px;
     text-align: center;
     font-size: 18px;
+    color: #fff;
 }
 
 .fare-box strong {
@@ -229,7 +265,6 @@ select {
 }
 
 @media (max-width: 600px) {
-
     .dashboard {
         padding: 15px;
     }
@@ -247,5 +282,4 @@ select {
     .form-card {
         padding: 20px;
     }
-
 }

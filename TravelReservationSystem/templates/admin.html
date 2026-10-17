@@ -1,82 +1,453 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — Travel Reservation System</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
-        .action-row{display:flex;flex-wrap:wrap;gap:6px}.action-btn{display:inline-block;width:auto;margin:0;padding:7px 10px;border:0;border-radius:7px;color:#fff;text-decoration:none;cursor:pointer;font-size:13px}.view{background:#198754}.delete{background:#dc3545}.status-form{display:flex;gap:5px;align-items:center}.status-form select{width:auto;padding:7px}.status-form button{width:auto;margin:0;padding:7px 10px}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+
+        /* SIDEBAR */
+        .admin-layout{display:flex;min-height:100vh}
+        .sidebar{width:230px;background:#1e293b;border-right:1px solid #334155;padding:0;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100}
+        .sidebar-brand{padding:22px 20px 18px;border-bottom:1px solid #334155;font-size:15px;font-weight:800;color:#60a5fa;letter-spacing:.3px}
+        .sidebar-brand span{display:block;font-size:11px;color:#64748b;font-weight:500;margin-top:2px}
+        .sidebar-nav{padding:12px 0}
+        .nav-section{padding:10px 18px 4px;font-size:10px;font-weight:700;color:#475569;letter-spacing:1px;text-transform:uppercase}
+        .nav-link{display:flex;align-items:center;gap:9px;padding:9px 20px;color:#94a3b8;text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;border-left:3px solid transparent}
+        .nav-link:hover{color:#e2e8f0;background:#0f172a;border-left-color:#3b82f6}
+        .nav-link.active{color:#60a5fa;background:#0f172a40;border-left-color:#3b82f6;font-weight:600}
+        .nav-icon{width:16px;text-align:center}
+
+        /* MAIN */
+        .main-content{margin-left:230px;flex:1;padding:28px 30px;min-width:0}
+
+        /* TOP BAR */
+        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+        .topbar h1{font-size:20px;font-weight:700;color:#f1f5f9}
+        .logout-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#dc2626;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;transition:.15s}
+        .logout-btn:hover{background:#b91c1c}
+
+        /* STAT CARDS */
+        .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+        .stat-card{background:linear-gradient(135deg,#1e293b 0%,#263148 100%);border:1px solid #334155;border-radius:14px;padding:20px 22px;position:relative;overflow:hidden}
+        .stat-card::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.1}
+        .stat-card.blue::before{background:#3b82f6}
+        .stat-card.yellow::before{background:#f59e0b}
+        .stat-card.green::before{background:#10b981}
+        .stat-card.purple::before{background:#8b5cf6}
+        .stat-num{font-size:30px;font-weight:800;color:#f1f5f9;line-height:1}
+        .stat-label{font-size:12px;color:#64748b;margin-top:6px;font-weight:500;letter-spacing:.3px;text-transform:uppercase}
+        .stat-icon{font-size:22px;margin-bottom:10px}
+
+        /* SECTION CARDS */
+        .section-card{background:#1e293b;border:1px solid #334155;border-radius:14px;margin-bottom:24px;overflow:hidden}
+        .section-header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #334155;background:#16213e}
+        .section-header h2{font-size:15px;font-weight:700;color:#f1f5f9}
+        .section-header .header-actions{display:flex;gap:8px;align-items:center}
+
+        /* ALERTS */
+        .flash-area{margin-bottom:18px}
+        .flash-msg{padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:8px}
+        .flash-msg.success{background:#064e3b30;border:1px solid #059669;color:#34d399}
+        .flash-msg.error{background:#7f1d1d30;border:1px solid #dc2626;color:#f87171}
+
+        /* VEHICLE TYPE CARDS */
+        .vt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;padding:20px 24px}
+        .vt-card{background:#0f172a;border:1px solid #334155;border-radius:12px;padding:18px;position:relative}
+        .vt-card.unavailable{opacity:.6}
+        .vt-name{font-size:15px;font-weight:700;color:#f1f5f9;margin-bottom:4px}
+        .vt-badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+        .vt-badge.on{background:#064e3b;color:#34d399;border:1px solid #059669}
+        .vt-badge.off{background:#7f1d1d30;color:#f87171;border:1px solid #dc2626}
+        .vt-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+        .vt-stat-item{background:#1e293b;border-radius:8px;padding:8px 10px;text-align:center}
+        .vt-stat-num{font-size:18px;font-weight:800;color:#60a5fa}
+        .vt-stat-lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+        .vt-price{font-size:12px;color:#94a3b8;margin-bottom:12px}
+        .vt-price strong{color:#fbbf24}
+        .vt-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+        /* TABLES */
+        .table-wrap{overflow-x:auto;padding:0}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th{background:#0f172a;padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #334155;white-space:nowrap}
+        td{padding:11px 14px;border-bottom:1px solid #1e293b40;color:#cbd5e1;vertical-align:middle}
+        tr:last-child td{border-bottom:0}
+        tr:hover td{background:#ffffff06}
+
+        /* STATUS BADGES */
+        .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+        .badge.pending{background:#78350f30;color:#fbbf24;border:1px solid #d97706}
+        .badge.confirmed{background:#064e3b30;color:#34d399;border:1px solid #059669}
+        .badge.cancelled{background:#7f1d1d30;color:#f87171;border:1px solid #dc2626}
+        .badge.completed{background:#1e3a5f30;color:#60a5fa;border:1px solid #3b82f6}
+        .badge.available{background:#064e3b30;color:#34d399;border:1px solid #059669}
+        .badge.reserved{background:#1e3a5f30;color:#60a5fa;border:1px solid #3b82f6}
+        .badge.in-use{background:#78350f30;color:#fbbf24;border:1px solid #d97706}
+        .badge.maintenance{background:#4a1d96 30;color:#c4b5fd;border:1px solid #7c3aed}
+        .badge.unavailable{background:#27272a;color:#71717a;border:1px solid #52525b}
+
+        /* ACTION BUTTONS */
+        .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:0;cursor:pointer;text-decoration:none;transition:all .15s;white-space:nowrap}
+        .btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
+        .btn-success{background:#059669;color:#fff}.btn-success:hover{background:#047857}
+        .btn-warning{background:#d97706;color:#fff}.btn-warning:hover{background:#b45309}
+        .btn-danger{background:#dc2626;color:#fff}.btn-danger:hover{background:#b91c1c}
+        .btn-ghost{background:#334155;color:#94a3b8}.btn-ghost:hover{background:#475569;color:#e2e8f0}
+        .btn-toggle-on{background:#059669;color:#fff;font-size:11px;padding:4px 10px}
+        .btn-toggle-off{background:#374151;color:#9ca3af;font-size:11px;padding:4px 10px}
+
+        /* STATUS FORMS */
+        .status-form{display:flex;gap:6px;align-items:center}
+        .status-form select{background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:5px 8px;border-radius:6px;font-size:12px;cursor:pointer}
+        .status-form button{background:#2563eb;color:#fff;border:0;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+        .status-form button:hover{background:#1d4ed8}
+
+        .vehicle-code{font-family:monospace;background:#0f172a;border:1px solid #334155;padding:2px 8px;border-radius:5px;font-size:13px;font-weight:700;color:#60a5fa}
+        .ref-code{font-family:monospace;font-size:12px;color:#94a3b8}
+
+        .add-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;transition:.15s}
+        .add-btn:hover{background:#1d4ed8}
+
+        /* SECTION TABS */
+        .tab-bar{display:flex;gap:0;border-bottom:1px solid #334155;padding:0 20px;background:#16213e}
+        .tab-item{padding:12px 18px;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+        .tab-item.active{color:#60a5fa;border-bottom-color:#3b82f6}
+        .tab-content{display:none;padding:0}
+        .tab-content.active{display:block}
+
+        @media(max-width:900px){
+            .sidebar{width:60px}
+            .sidebar-brand span,.nav-section,.nav-link span{display:none}
+            .nav-link{padding:12px;justify-content:center}
+            .main-content{margin-left:60px;padding:16px}
+            .stat-grid{grid-template-columns:1fr 1fr}
+            .vt-grid{grid-template-columns:1fr 1fr}
+        }
     </style>
 </head>
 <body>
-<div class="dashboard">
-    <div class="dashboard-header">
-        <div><h1>Travel Reservation System</h1><p>Administrator Dashboard</p></div>
-        <a class="logout-btn" href="{{ url_for('logout') }}">Logout</a>
-    </div>
+<div class="admin-layout">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}<div class="message {{ category }}">{{ message }}</div>{% endfor %}
-    {% endwith %}
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            🚌 TRS Admin
+            <span>Travel Reservation System</span>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Overview</div>
+            <a class="nav-link active" href="{{ url_for('admin_dashboard') }}"><span class="nav-icon">📊</span><span>Dashboard</span></a>
 
-    <div class="dashboard-card">
-        <h2>All Reservations</h2>
-        <p>Customer edit, cancellation, deletion, and status changes are reflected here.</p>
-        <div class="table-container">
-            <table>
-                <thead><tr><th>ID</th><th>Customer</th><th>Passenger</th><th>Route</th><th>Date/Time</th><th>Vehicle</th><th>Fare</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>
-                {% for r in reservations %}
-                    <tr>
-                        <td>{{ r['reservation_id'] }}</td>
-                        <td>{{ r['account_name'] }}<br><small>{{ r['username'] }}</small></td>
-                        <td>{{ r['passenger_name'] }}{% if r['passengers']|int > 1 %} (+{{ r['passengers']|int - 1 }}){% endif %}</td>
-                        <td>{{ r['origin'] }} → {{ r['destination'] }}</td>
-                        <td>{{ r['travel_date'] }}<br>{{ r['travel_time'] }}</td>
-                        <td>{{ r['vehicle'] }}</td>
-                        <td>₱{{ '%.2f'|format(r['fare']|float) }}</td>
-                        <td>
-                            <form class="status-form" method="POST" action="{{ url_for('update_status', reservation_id=r['reservation_id']) }}">
-                                <select name="status">
-                                    {% for s in ['Pending','Confirmed','Cancelled','Completed'] %}<option value="{{ s }}" {% if r['status']==s %}selected{% endif %}>{{ s }}</option>{% endfor %}
-                                </select>
-                                <button type="submit">Update</button>
-                            </form>
-                        </td>
-                        <td>
-                            <div class="action-row">
-                                {% if r['first_ticket_number'] %}<a class="action-btn view" href="{{ url_for('view_ticket', ticket_number=r['first_ticket_number']) }}">🎫 Ticket</a>{% endif %}
-                                <form method="POST" action="{{ url_for('admin_delete_reservation', reservation_id=r['reservation_id']) }}" onsubmit="return confirm('Delete this reservation and its tickets permanently?');">
-                                    <button class="action-btn delete" type="submit">🗑 Delete</button>
+            <div class="nav-section">Vehicles</div>
+            <a class="nav-link" href="{{ url_for('admin_vehicles') }}"><span class="nav-icon">🚐</span><span>Vehicle Registry</span></a>
+            <a class="nav-link" href="{{ url_for('admin_dashboard') }}#types"><span class="nav-icon">⚙️</span><span>Vehicle Types</span></a>
+
+            <div class="nav-section">Reservations</div>
+            <a class="nav-link" href="{{ url_for('admin_dashboard') }}#reservations"><span class="nav-icon">📋</span><span>All Reservations</span></a>
+            <a class="nav-link" href="{{ url_for('admin_dashboard') }}#tickets"><span class="nav-icon">🎫</span><span>All Tickets</span></a>
+
+            <div class="nav-section">Users</div>
+            <a class="nav-link" href="{{ url_for('admin_dashboard') }}#users"><span class="nav-icon">👥</span><span>Registered Users</span></a>
+
+            <div class="nav-section">Account</div>
+            <a class="nav-link" href="{{ url_for('logout') }}" style="color:#f87171"><span class="nav-icon">🚪</span><span>Logout</span></a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+
+        <div class="topbar">
+            <div>
+                <h1>Administrator Dashboard</h1>
+                <p style="font-size:12px;color:#64748b;margin-top:3px">Travel Reservation System — Full Control Panel</p>
+            </div>
+            <a href="{{ url_for('logout') }}" class="logout-btn">🚪 Logout</a>
+        </div>
+
+        <!-- FLASH MESSAGES -->
+        <div class="flash-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash-msg {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+        </div>
+
+        <!-- STAT CARDS -->
+        <div class="stat-grid">
+            <div class="stat-card blue">
+                <div class="stat-icon">📋</div>
+                <div class="stat-num">{{ total_res }}</div>
+                <div class="stat-label">Total Reservations</div>
+            </div>
+            <div class="stat-card yellow">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-num">{{ pending_res }}</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card green">
+                <div class="stat-icon">✅</div>
+                <div class="stat-num">{{ confirmed_res }}</div>
+                <div class="stat-label">Confirmed</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="stat-icon">🚌</div>
+                <div class="stat-num">{{ total_vehicles }}</div>
+                <div class="stat-label">Registered Vehicles</div>
+            </div>
+        </div>
+
+        <!-- VEHICLE TYPE AVAILABILITY -->
+        <div class="section-card" id="types">
+            <div class="section-header">
+                <h2>⚙️ Available Vehicle Types</h2>
+                <div class="header-actions">
+                    <span style="font-size:12px;color:#64748b">Manage pricing & availability per vehicle type</span>
+                </div>
+            </div>
+            <div class="vt-grid">
+                {% for vt in vehicle_type_stats %}
+                <div class="vt-card {% if not vt.is_available %}unavailable{% endif %}">
+                    <div class="vt-name">{{ vt.type_name }}</div>
+                    <div>
+                        <span class="vt-badge {% if vt.is_available %}on{% else %}off{% endif %}">
+                            {% if vt.is_available %}Available{% else %}Disabled{% endif %}
+                        </span>
+                    </div>
+                    <div class="vt-stats">
+                        <div class="vt-stat-item">
+                            <div class="vt-stat-num">{{ vt.total_vehicles }}</div>
+                            <div class="vt-stat-lbl">Total</div>
+                        </div>
+                        <div class="vt-stat-item">
+                            <div class="vt-stat-num" style="color:#34d399">{{ vt.available_vehicles }}</div>
+                            <div class="vt-stat-lbl">Free</div>
+                        </div>
+                        <div class="vt-stat-item">
+                            <div class="vt-stat-num" style="color:#fbbf24">{{ vt.reserved_vehicles }}</div>
+                            <div class="vt-stat-lbl">Reserved</div>
+                        </div>
+                        <div class="vt-stat-item">
+                            <div class="vt-stat-num" style="color:#94a3b8">{{ vt.max_passengers }}</div>
+                            <div class="vt-stat-lbl">Max Pax</div>
+                        </div>
+                    </div>
+                    <div class="vt-price">
+                        {% if vt.fare_type == 'fixed' %}
+                            Fare: <strong>₱{{ '%.2f'|format(vt.fixed_fare) }} fixed</strong>
+                        {% else %}
+                            Rate: <strong>₱{{ '%.2f'|format(vt.rate_per_km) }}/km</strong>
+                        {% endif %}
+                    </div>
+                    <div class="vt-actions">
+                        <a class="btn btn-ghost" href="{{ url_for('admin_edit_vehicle_type', type_id=vt.type_id) }}" style="font-size:11px;padding:4px 10px">✏️ Edit Pricing</a>
+                        <form method="POST" action="{{ url_for('admin_toggle_vehicle_type', type_id=vt.type_id) }}" style="display:inline">
+                            <button type="submit" class="btn {% if vt.is_available %}btn-toggle-on{% else %}btn-toggle-off{% endif %}">
+                                {% if vt.is_available %}● On{% else %}○ Off{% endif %}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <p style="padding:20px;color:#64748b">No vehicle types configured.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- VEHICLE REGISTRY -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2>🚐 Vehicle Registry</h2>
+                <div class="header-actions">
+                    <a href="{{ url_for('admin_add_vehicle') }}" class="add-btn">+ Register Vehicle</a>
+                    <a href="{{ url_for('admin_vehicles') }}" class="btn btn-ghost">View All →</a>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th><th>Type</th><th>Name / Model</th><th>Plate</th>
+                            <th>Capacity</th><th>Driver</th><th>Status</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for v in vehicles %}
+                        <tr>
+                            <td><span class="vehicle-code">{{ v['vehicle_code'] }}</span></td>
+                            <td>{{ v['vehicle_type'] }}</td>
+                            <td>{{ v['vehicle_name'] }}</td>
+                            <td>{{ v['plate_number'] or '—' }}</td>
+                            <td>{{ v['capacity'] }}</td>
+                            <td>{{ v['assigned_driver'] or '—' }}</td>
+                            <td>
+                                <span class="badge {{ v['status']|lower|replace(' ', '-') }}">{{ v['status'] }}</span>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px">
+                                    <a href="{{ url_for('admin_edit_vehicle', vehicle_id=v['vehicle_id']) }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px">✏️ Edit</a>
+                                    <form method="POST" action="{{ url_for('admin_delete_vehicle', vehicle_id=v['vehicle_id']) }}" onsubmit="return confirm('Remove this vehicle from the registry?');" style="display:inline">
+                                        <button type="submit" class="btn btn-danger" style="font-size:11px;padding:4px 10px">🗑 Remove</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" style="text-align:center;color:#64748b;padding:24px">
+                            No vehicles registered yet.
+                            <a href="{{ url_for('admin_add_vehicle') }}" style="color:#60a5fa;margin-left:8px">Register your first vehicle →</a>
+                        </td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ALL RESERVATIONS -->
+        <div class="section-card" id="reservations">
+            <div class="section-header">
+                <h2>📋 All Reservations</h2>
+                <span style="font-size:12px;color:#64748b">Update status to confirm, cancel, or complete trips</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Booking Ref</th><th>Customer</th><th>Passenger</th>
+                            <th>Route</th><th>Date / Time</th><th>Vehicle</th>
+                            <th>V. Code</th><th>Fare</th><th>Status</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for r in reservations %}
+                        <tr>
+                            <td style="font-weight:700;color:#60a5fa">#{{ r['reservation_id'] }}</td>
+                            <td><span class="ref-code">{{ r['booking_reference'] or '—' }}</span></td>
+                            <td>
+                                {{ r['account_name'] }}<br>
+                                <span style="font-size:11px;color:#64748b">{{ r['username'] }}</span>
+                            </td>
+                            <td>
+                                {{ r['passenger_name'] }}
+                                {% if r['passengers']|int > 1 %}
+                                    <span style="font-size:11px;color:#64748b"> +{{ r['passengers']|int - 1 }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-size:12px">{{ r['origin'] }} → {{ r['destination'] }}</td>
+                            <td style="font-size:12px">{{ r['travel_date'] }}<br>{{ r['travel_time'] }}</td>
+                            <td>{{ r['vehicle'] }}</td>
+                            <td>
+                                {% if r['vehicle_code'] %}
+                                    <span class="vehicle-code">{{ r['vehicle_code'] }}</span>
+                                {% else %}
+                                    <span style="color:#475569;font-size:12px">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="font-weight:700;color:#34d399">₱{{ '%.2f'|format(r['fare']|float) }}</td>
+                            <td>
+                                <form class="status-form" method="POST" action="{{ url_for('update_status', reservation_id=r['reservation_id']) }}">
+                                    <select name="status">
+                                        {% for s in ['Pending','Confirmed','Cancelled','Completed'] %}
+                                            <option value="{{ s }}" {% if r['status']==s %}selected{% endif %}>{{ s }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit">✓</button>
                                 </form>
-                            </div>
-                        </td>
-                    </tr>
-                {% else %}<tr><td colspan="9">No reservations found.</td></tr>{% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                                    {% if r['first_ticket_number'] %}
+                                        <a class="btn btn-success" href="{{ url_for('view_ticket', ticket_number=r['first_ticket_number']) }}" style="font-size:11px;padding:4px 10px">🎫 Ticket</a>
+                                    {% endif %}
+                                    <form method="POST" action="{{ url_for('admin_delete_reservation', reservation_id=r['reservation_id']) }}" onsubmit="return confirm('Delete this reservation permanently?');" style="display:inline">
+                                        <button class="btn btn-danger" type="submit" style="font-size:11px;padding:4px 10px">🗑</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="11" style="text-align:center;color:#64748b;padding:24px">No reservations found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <div class="dashboard-card">
-        <h2>All Passenger Tickets</h2>
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Ticket</th><th>Customer</th><th>Passenger</th><th>Vehicle</th><th>Seat</th><th>Status</th><th>Action</th></tr></thead>
-                <tbody>
-                {% for t in tickets %}
-                    <tr><td>{{ t['ticket_number'] }}</td><td>{{ t['account_name'] }}</td><td>{{ t['passenger_name'] }}</td><td>{{ t['vehicle'] }}</td><td>{{ t['seat_number'] }}</td><td>{{ t['status'] }}</td><td><a class="action-btn view" href="{{ url_for('view_ticket', ticket_number=t['ticket_number']) }}">View Ticket</a> <a class="action-btn view" href="{{ url_for('view_receipt', ticket_number=t['ticket_number']) }}">🧾 Receipt</a></td></tr>
-                {% else %}<tr><td colspan="7">No tickets found.</td></tr>{% endfor %}
-                </tbody>
-            </table>
+        <!-- ALL TICKETS -->
+        <div class="section-card" id="tickets">
+            <div class="section-header">
+                <h2>🎫 All Passenger Tickets</h2>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket No.</th><th>Customer</th><th>Passenger</th>
+                            <th>Vehicle</th><th>V. Code</th><th>Seat</th><th>Status</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for t in tickets %}
+                        <tr>
+                            <td class="ref-code">{{ t['ticket_number'] }}</td>
+                            <td>{{ t['account_name'] }}</td>
+                            <td>{{ t['passenger_name'] }}</td>
+                            <td>{{ t['vehicle'] }}</td>
+                            <td>
+                                {% if t['vehicle_code'] %}
+                                    <span class="vehicle-code">{{ t['vehicle_code'] }}</span>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>{{ t['seat_number'] or '—' }}</td>
+                            <td><span class="badge {{ t['status']|lower }}">{{ t['status'] }}</span></td>
+                            <td>
+                                <div style="display:flex;gap:5px">
+                                    <a class="btn btn-success" href="{{ url_for('view_ticket', ticket_number=t['ticket_number']) }}" style="font-size:11px;padding:4px 10px">🎫 Ticket</a>
+                                    <a class="btn btn-ghost" href="{{ url_for('view_receipt', ticket_number=t['ticket_number']) }}" style="font-size:11px;padding:4px 10px">🧾 Receipt</a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" style="text-align:center;color:#64748b;padding:24px">No tickets found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <div class="dashboard-card">
-        <h2>Registered Users</h2>
-        <div class="table-container"><table><thead><tr><th>ID</th><th>Full Name</th><th>Username</th><th>Contact</th></tr></thead><tbody>
-        {% for u in users %}<tr><td>{{ u['user_id'] }}</td><td>{{ u['full_name'] }}</td><td>{{ u['username'] }}</td><td>{{ u['contact'] }}</td></tr>{% else %}<tr><td colspan="4">No users found.</td></tr>{% endfor %}
-        </tbody></table></div>
-    </div>
+        <!-- USERS -->
+        <div class="section-card" id="users">
+            <div class="section-header">
+                <h2>👥 Registered Users</h2>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Full Name</th><th>Username</th><th>Contact</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for u in users %}
+                        <tr>
+                            <td>{{ u['user_id'] }}</td>
+                            <td>{{ u['full_name'] }}</td>
+                            <td>{{ u['username'] }}</td>
+                            <td>{{ u['contact'] or '—' }}</td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="4" style="text-align:center;color:#64748b;padding:24px">No users found.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
 </div>
 </body>
 </html>

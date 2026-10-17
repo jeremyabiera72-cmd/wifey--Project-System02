@@ -232,18 +232,44 @@
                 </option>
 
 
-                {% for vehicle, rate in vehicle_rates.items() %}
+                {% if db_vehicle_types %}
 
+                    {% for vt in db_vehicle_types %}
 
-                <option value="{{ vehicle }}"
-                        data-rate="{{ rate }}">
+                    {% if vt.is_available %}
 
-                    {{ vehicle }} - ₱{{ rate }}/km
+                    <option value="{{ vt.type_name }}"
+                            data-rate="{{ vt.rate_per_km if vt.fare_type == 'distance' else vt.fixed_fare }}"
+                            data-fare-type="{{ vt.fare_type }}"
+                            data-fixed-fare="{{ vt.fixed_fare }}"
+                            data-max-passengers="{{ vt.max_passengers }}">
 
-                </option>
+                        {% if vt.fare_type == 'fixed' %}
+                            {{ vt.type_name }} — ₱{{ '%.0f'|format(vt.fixed_fare) }} fixed
+                        {% else %}
+                            {{ vt.type_name }} — ₱{{ vt.rate_per_km }}/km
+                        {% endif %}
 
+                    </option>
 
-                {% endfor %}
+                    {% endif %}
+
+                    {% endfor %}
+
+                {% else %}
+
+                    {% for vehicle, rate in vehicle_rates.items() %}
+
+                    <option value="{{ vehicle }}"
+                            data-rate="{{ rate }}">
+
+                        {{ vehicle }} - ₱{{ rate }}/km
+
+                    </option>
+
+                    {% endfor %}
+
+                {% endif %}
 
 
             </select>
@@ -997,7 +1023,8 @@ function updateLandDestinations() {
     if (origin) {
         if (
             vehicle === "Bus" ||
-            vehicle === "Van"
+            vehicle === "Van" ||
+            vehicle === "Private Van"
         ) {
             destinations =
                 TERMINALS_BY_CITY[origin] || [];
@@ -1042,7 +1069,7 @@ const vehicleInfo = {
     "Bus": {
 
         description:
-            "Bus seat reservation.",
+            "Bus seat reservation — shared public transport.",
 
         capacity:
             "Maximum capacity: 45 passengers.",
@@ -1056,7 +1083,7 @@ const vehicleInfo = {
     "Van": {
 
         description:
-            "Van seat reservation.",
+            "Van seat reservation — shared van transport.",
 
         capacity:
             "Maximum capacity: 12 passengers.",
@@ -1067,10 +1094,24 @@ const vehicleInfo = {
     },
 
 
+    "Private Van": {
+
+        description:
+            "Private Van — exclusive charter for your group. Fixed fare per booking.",
+
+        capacity:
+            "Maximum capacity: 10 passengers.",
+
+        bookingType:
+            "Booking type: Seat Reservation (Fixed Fare)."
+
+    },
+
+
     "Taxi": {
 
         description:
-            "Taxi ride reservation.",
+            "Taxi ride reservation — point-to-point transport.",
 
         capacity:
             "Maximum capacity: 4 passengers.",
@@ -1123,6 +1164,22 @@ const vehicleInfo = {
     }
 
 };
+
+// Merge any DB vehicle types not already in vehicleInfo
+(function() {
+    const dbTypes = {{ db_vehicle_types|tojson if db_vehicle_types else '[]' }};
+    dbTypes.forEach(function(vt) {
+        if (!vehicleInfo[vt.type_name]) {
+            vehicleInfo[vt.type_name] = {
+                description: vt.type_name + " reservation.",
+                capacity: "Maximum capacity: " + vt.max_passengers + " passengers.",
+                bookingType: vt.fare_type === 'fixed'
+                    ? "Booking type: Charter / Fixed Fare."
+                    : "Booking type: Reservation."
+            };
+        }
+    });
+})();
 
 
 

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Registry — Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+        .admin-layout{display:flex;min-height:100vh}
+        .sidebar{width:230px;background:#1e293b;border-right:1px solid #334155;padding:0;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100}
+        .sidebar-brand{padding:22px 20px 18px;border-bottom:1px solid #334155;font-size:15px;font-weight:800;color:#60a5fa}
+        .sidebar-brand span{display:block;font-size:11px;color:#64748b;font-weight:500;margin-top:2px}
+        .sidebar-nav{padding:12px 0}
+        .nav-section{padding:10px 18px 4px;font-size:10px;font-weight:700;color:#475569;letter-spacing:1px;text-transform:uppercase}
+        .nav-link{display:flex;align-items:center;gap:9px;padding:9px 20px;color:#94a3b8;text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;border-left:3px solid transparent}
+        .nav-link:hover,.nav-link.active{color:#60a5fa;background:#0f172a40;border-left-color:#3b82f6}
+        .nav-link.active{font-weight:600}
+        .main-content{margin-left:230px;flex:1;padding:28px 30px}
+        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+        .topbar h1{font-size:20px;font-weight:700;color:#f1f5f9}
+        .flash-area{margin-bottom:18px}
+        .flash-msg{padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:8px}
+        .flash-msg.success{background:#064e3b30;border:1px solid #059669;color:#34d399}
+        .flash-msg.error{background:#7f1d1d30;border:1px solid #dc2626;color:#f87171}
+        .section-card{background:#1e293b;border:1px solid #334155;border-radius:14px;margin-bottom:24px;overflow:hidden}
+        .section-header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #334155;background:#16213e}
+        .section-header h2{font-size:15px;font-weight:700;color:#f1f5f9}
+        .vt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:18px 24px}
+        .vt-card{background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px}
+        .vt-name{font-size:14px;font-weight:700;color:#f1f5f9}
+        .vt-counts{display:flex;gap:10px;margin-top:8px;font-size:12px;color:#64748b}
+        .vt-counts strong{color:#60a5fa}
+        .table-wrap{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th{background:#0f172a;padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #334155}
+        td{padding:11px 14px;border-bottom:1px solid #1e293b40;color:#cbd5e1;vertical-align:middle}
+        tr:last-child td{border-bottom:0}
+        tr:hover td{background:#ffffff06}
+        .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase}
+        .badge.available{background:#064e3b30;color:#34d399;border:1px solid #059669}
+        .badge.reserved{background:#1e3a5f30;color:#60a5fa;border:1px solid #3b82f6}
+        .badge.in-use{background:#78350f30;color:#fbbf24;border:1px solid #d97706}
+        .badge.maintenance{background:#4a1d9630;color:#c4b5fd;border:1px solid #7c3aed}
+        .badge.unavailable{background:#27272a;color:#71717a;border:1px solid #52525b}
+        .vehicle-code{font-family:monospace;background:#0f172a;border:1px solid #334155;padding:2px 8px;border-radius:5px;font-size:13px;font-weight:700;color:#60a5fa}
+        .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:0;cursor:pointer;text-decoration:none;transition:all .15s;white-space:nowrap}
+        .btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
+        .btn-ghost{background:#334155;color:#94a3b8}.btn-ghost:hover{background:#475569;color:#e2e8f0}
+        .btn-danger{background:#dc2626;color:#fff}.btn-danger:hover{background:#b91c1c}
+        .add-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;transition:.15s}
+        .add-btn:hover{background:#1d4ed8}
+    </style>
+</head>
+<body>
+<div class="admin-layout">
+    <aside class="sidebar">
+        <div class="sidebar-brand">🚌 TRS Admin<span>Travel Reservation System</span></div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Overview</div>
+            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">📊 Dashboard</a>
+            <div class="nav-section">Vehicles</div>
+            <a class="nav-link active" href="{{ url_for('admin_vehicles') }}">🚐 Vehicle Registry</a>
+            <div class="nav-section">Account</div>
+            <a class="nav-link" href="{{ url_for('logout') }}" style="color:#f87171">🚪 Logout</a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="topbar">
+            <div>
+                <h1>🚐 Vehicle Registry</h1>
+                <p style="font-size:12px;color:#64748b;margin-top:3px">Manage all registered vehicle units</p>
+            </div>
+            <a href="{{ url_for('admin_add_vehicle') }}" class="add-btn">+ Register New Vehicle</a>
+        </div>
+
+        <div class="flash-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash-msg {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+        </div>
+
+        <!-- AVAILABILITY SUMMARY -->
+        <div class="section-card">
+            <div class="section-header"><h2>📊 Type Availability Summary</h2></div>
+            <div class="vt-grid">
+            {% for vt in vehicle_type_stats %}
+                <div class="vt-card">
+                    <div class="vt-name">{{ vt.type_name }}</div>
+                    <div class="vt-counts">
+                        Total: <strong>{{ vt.total_vehicles }}</strong> &nbsp;|&nbsp;
+                        Free: <strong style="color:#34d399">{{ vt.available_vehicles }}</strong> &nbsp;|&nbsp;
+                        Busy: <strong style="color:#fbbf24">{{ vt.reserved_vehicles }}</strong>
+                    </div>
+                </div>
+            {% else %}
+                <p style="padding:12px;color:#64748b">No vehicle types found.</p>
+            {% endfor %}
+            </div>
+        </div>
+
+        <!-- VEHICLE LIST -->
+        <div class="section-card">
+            <div class="section-header">
+                <h2>🚐 All Registered Vehicles</h2>
+                <span style="font-size:12px;color:#64748b">{{ vehicles|length }} vehicle(s) in registry</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Code</th><th>Type</th><th>Name / Model</th><th>Plate</th>
+                            <th>Capacity</th><th>Driver</th><th>Status</th><th>Registered</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for v in vehicles %}
+                        <tr>
+                            <td><span class="vehicle-code">{{ v['vehicle_code'] }}</span></td>
+                            <td>{{ v['vehicle_type'] }}</td>
+                            <td><strong style="color:#f1f5f9">{{ v['vehicle_name'] }}</strong></td>
+                            <td>{{ v['plate_number'] or '—' }}</td>
+                            <td>{{ v['capacity'] }} pax</td>
+                            <td>{{ v['assigned_driver'] or '—' }}</td>
+                            <td>
+                                <span class="badge {{ v['status']|lower|replace(' ', '-') }}">{{ v['status'] }}</span>
+                            </td>
+                            <td style="font-size:12px;color:#64748b">{{ v['created_at'][:10] if v['created_at'] else '—' }}</td>
+                            <td>
+                                <div style="display:flex;gap:6px">
+                                    <a href="{{ url_for('admin_edit_vehicle', vehicle_id=v['vehicle_id']) }}" class="btn btn-ghost" style="font-size:11px;padding:4px 10px">✏️ Edit</a>
+                                    <form method="POST" action="{{ url_for('admin_delete_vehicle', vehicle_id=v['vehicle_id']) }}" onsubmit="return confirm('Remove vehicle {{ v["vehicle_code"] }} from the registry?');" style="display:inline">
+                                        <button type="submit" class="btn btn-danger" style="font-size:11px;padding:4px 10px">🗑 Remove</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="9" style="text-align:center;color:#64748b;padding:32px">
+                                <div style="font-size:32px;margin-bottom:10px">🚌</div>
+                                No vehicles registered yet.<br>
+                                <a href="{{ url_for('admin_add_vehicle') }}" style="color:#60a5fa;margin-top:8px;display:inline-block">Register your first vehicle →</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="margin-top:16px">
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-ghost">← Back to Dashboard</a>
+        </div>
+    </main>
+</div>
+</body>
+</html>

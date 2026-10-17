@@ -19,6 +19,8 @@ import os
 import urllib.request
 import urllib.parse
 import qrcode
+import secrets
+import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(
@@ -33,6 +35,7 @@ DATABASE = os.path.join(BASE_DIR, "travel_reservation.db")
 VEHICLE_RATES = {
     "Bus": 2.22,
     "Van": 2,
+    "Private Van": 2.0,
     "Taxi": 13.50,
     "Motor": 7,
     "Airplane": 50,
@@ -42,6 +45,7 @@ VEHICLE_RATES = {
 VEHICLE_LIMITS = {
     "Bus": 45,
     "Van": 12,
+    "Private Van": 10,
     "Taxi": 4,
     "Motor": 1,
     "Airplane": 180,
@@ -51,6 +55,7 @@ VEHICLE_LIMITS = {
 VEHICLE_CAPACITY = {
     "Bus": 45,
     "Van": 12,
+    "Private Van": 10,
     "Taxi": 4,
     "Motor": 1,
     "Airplane": 180,
@@ -60,7 +65,7 @@ VEHICLE_CAPACITY = {
 LAND_LOCATIONS = ['Molave', 'Pagadian City', 'Ipil', 'Zamboanga City', 'Dipolog City', 'Dapitan City', 'Iligan City', 'Ozamiz City', 'Cagayan de Oro City', 'Malaybalay City', 'Valencia City', 'Gingoog City', 'Butuan City', 'Surigao City', 'Davao City', 'Tagum City', 'Panabo City', 'Digos City', 'Mati City', 'General Santos City', 'Koronadal City', 'Kidapawan City', 'Tacurong City', 'Cotabato City', 'Alicia', 'Buug', 'Diplahan', 'Imelda', 'Kabasalan', 'Mabuhay', 'Malangas', 'Naga', 'Olutanga', 'Payao', 'Roseller Lim', 'Siay', 'Talusan', 'Tungawan', 'Aurora', 'Dumingag', 'Guipos', 'Josefina', 'Kumalarang', 'Labangan', 'Lakewood', 'Lapuyan', 'Mahayag', 'Midsalip', 'Ramon Magsaysay', 'San Miguel', 'San Pablo', 'Sominot', 'Tabina', 'Tambulig', 'Tukuran', 'Vincenzo A. Sagun', 'Aloran', 'Baliangao', 'Bonifacio', 'Calamba', 'Clarin', 'Concepcion', 'Don Victoriano Chiongbian', 'Jimenez', 'Lopez Jaena', 'Panaon', 'Plaridel', 'Sapang Dalaga', 'Sinacaban', 'Tangub City', 'Tudela', 'Baungon', 'Cabanglasan', 'Damulog', 'Dangcagan', 'Don Carlos', 'Impasug-ong', 'Kibawe', 'Kitaotao', 'Lantapan', 'Libona', 'Malitbog', 'Manolo Fortich', 'Maramag', 'Pangantucan', 'Quezon', 'San Fernando', 'Sumilao', 'Talakag', 'Asuncion', 'Braulio E. Dujali', 'Carmen', 'Kapalong', 'Laak', 'Maco', 'Mawab', 'Monkayo', 'Montevista', 'New Bataan', 'New Corella', 'San Isidro', 'Santo Tomas', 'Talaingod', 'Baganga', 'Banaybanay', 'Boston', 'Caraga', 'Cateel', 'Lupon', 'Manay', 'Governor Generoso', 'Bansalan', 'Hagonoy', 'Kiblawan', 'Magsaysay', 'Malalag', 'Padada', 'Santa Cruz', 'Sulop', 'Alabel', 'Glan', 'Kiamba', 'Maasim', 'Malapatan', 'Malungon', 'Polomolok', 'Sarangani', 'Tupi', 'Banga', 'Lake Sebu', 'Norala', 'Santo Nino', 'Surallah', 'Tampakan', 'Tantangan', 'Tboli', 'Arakan', 'Banisilan', 'Kabacan', 'Libungan', 'Matalam', 'Makilala', 'Magpet', 'Mlang', 'Midsayap', 'Pigcawayan', 'Pikit', 'President Roxas', 'Aleosan', 'Alamada', 'Antipas', 'Buldon', 'Datu Abdullah Sangki', 'Datu Anggal Midtimbang', 'Datu Blah T. Sinsuat', 'Datu Hoffer Ampatuan', 'Datu Montawal', 'Datu Odin Sinsuat', 'Datu Paglas', 'Datu Piang', 'Datu Salibo', 'Datu Saudi Ampatuan', 'Datu Unsay', 'General Salipada K. Pendatun', 'Guindulungan', 'Kadayangan', 'Lambayong', 'Lantawan', 'Maguing', 'Malabang', 'Matanog', 'Pagalungan', 'Pagagawan', 'Parang', 'Patikul', 'Picong', 'Rajah Buayan', 'Sultan Kudarat', 'Sultan Mastura', 'Talayan', 'Upi', 'Wao', 'Buenavista', 'Cabadbaran City', 'Claver', 'Dinagat', 'Esperanza', 'Gigaquit', 'Hinatuan', 'Jabonga', 'Kitcharao', 'Las Nieves', 'Lianga', 'Loreto', 'Madrid', 'Mainit', 'Malimono', 'Nasipit', 'Placer', 'Prosperidad', 'San Francisco', 'San Francisco (Agusan del Sur)', 'San Francisco, Agusan del Sur', 'Bayugan City', 'Trento', 'Rosario', 'Bunawan', 'San Jose', 'San Luis', 'Santa Monica', 'Sibagat', 'Sison', 'Socorro', 'Tagana-an', 'Tubod', 'Veruela', 'Bacuag', 'Basilisa', 'Carrascal', 'Cortes', 'Del Carmen', 'Dapa', 'General Luna', 'Libjo', 'Limasawa', 'Pilar', 'San Benito', 'San Juan', 'Surigao del Norte', 'Tago', 'Barobo', 'Bayabas', 'Cagwait', 'Lanuza', 'Lingig', 'Marihatag', 'San Agustin', 'Tagbina', 'Tandag City']
 AIRPORT_LOCATIONS = ["Zamboanga International Airport","Pagadian Airport","Dipolog Airport","Laguindingan Airport","Labo Airport (Ozamiz)","Francisco Bangoy International Airport","General Santos International Airport","Cotabato Airport","Butuan Airport","Surigao Airport","Siargao Airport","Tandag Airport"]
 PORT_LOCATIONS = ["Port of Zamboanga","Port of Iligan","Port of Cagayan de Oro","Port of Ozamiz","Port of Davao","Port of General Santos","Port of Surigao","Port of Dapitan","Port of Nasipit"]
-VEHICLE_LOCATION_TYPES = {"Bus":"land","Van":"land","Taxi":"land","Motor":"land","Airplane":"air","Ferry":"sea"}
+VEHICLE_LOCATION_TYPES = {"Bus":"land","Van":"land","Private Van":"land","Taxi":"land","Motor":"land","Airplane":"air","Ferry":"sea"}
 ALL_MINDANAO_LAND_LOCATIONS = sorted(set(LAND_LOCATIONS))
 
 BARANGAYS_BY_CITY = {
@@ -616,12 +621,9 @@ def init_database():
         """
     )
 
-    add_missing_column(
-        cursor,
-        "reservations",
-        "passenger_names",
-        "TEXT"
-    )
+    add_missing_column(cursor, "reservations", "passenger_names", "TEXT")
+    add_missing_column(cursor, "reservations", "booking_reference", "TEXT")
+    add_missing_column(cursor, "reservations", "vehicle_code", "TEXT")
 
     cursor.execute(
         """
@@ -651,39 +653,17 @@ def init_database():
         """
     )
 
-    add_missing_column(
-        cursor,
-        "tickets",
-        "ticket_number",
-        "TEXT"
-    )
-
-    add_missing_column(
-        cursor,
-        "tickets",
-        "seat_number",
-        "TEXT"
-    )
-
-    add_missing_column(
-        cursor,
-        "tickets",
-        "booking_type",
-        "TEXT"
-    )
-
-    add_missing_column(
-        cursor,
-        "tickets",
-        "passengers",
-        "INTEGER DEFAULT 1"
-    )
+    add_missing_column(cursor, "tickets", "ticket_number", "TEXT")
+    add_missing_column(cursor, "tickets", "seat_number", "TEXT")
+    add_missing_column(cursor, "tickets", "booking_type", "TEXT")
+    add_missing_column(cursor, "tickets", "passengers", "INTEGER DEFAULT 1")
+    add_missing_column(cursor, "tickets", "vehicle_code", "TEXT")
 
     cursor.execute(
         """
         UPDATE tickets
         SET booking_type = CASE
-            WHEN vehicle IN ('Bus', 'Van')
+            WHEN vehicle IN ('Bus', 'Van', 'Private Van')
                 THEN 'Seat Reservation'
             WHEN vehicle IN ('Taxi', 'Motor')
                 THEN 'Ride Reservation'
@@ -695,20 +675,66 @@ def init_database():
         """
     )
 
-    admin_password = hash_password("admin123")
+    # ── vehicle_types table ──────────────────────────────────────────────
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS vehicle_types (
+            type_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type_name TEXT UNIQUE NOT NULL,
+            fare_type TEXT NOT NULL DEFAULT 'distance',
+            rate_per_km REAL DEFAULT 2.22,
+            fixed_fare REAL DEFAULT 0,
+            max_passengers INTEGER DEFAULT 45,
+            is_available INTEGER DEFAULT 1
+        )
+        """
+    )
 
+    # Seed default vehicle types if empty
+    existing_types = cursor.execute(
+        "SELECT COUNT(*) FROM vehicle_types"
+    ).fetchone()[0]
+    if existing_types == 0:
+        cursor.executemany(
+            """
+            INSERT OR IGNORE INTO vehicle_types
+            (type_name, fare_type, rate_per_km, fixed_fare, max_passengers, is_available)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            [
+                ("Bus",         "distance", 2.22,  0.0,    45, 1),
+                ("Van",         "distance", 2.0,   0.0,    12, 1),
+                ("Private Van", "fixed",    0.0,   1500.0, 10, 1),
+                ("Taxi",        "distance", 13.50, 0.0,     4, 1),
+            ]
+        )
+
+    # ── vehicles table ───────────────────────────────────────────────────
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS vehicles (
+            vehicle_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            vehicle_code TEXT UNIQUE NOT NULL,
+            vehicle_type TEXT NOT NULL,
+            vehicle_name TEXT NOT NULL,
+            plate_number TEXT,
+            capacity INTEGER DEFAULT 1,
+            status TEXT DEFAULT 'Available',
+            assigned_driver TEXT,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    admin_password = hash_password("admin123")
     cursor.execute(
         """
         INSERT OR IGNORE INTO users
         (full_name, username, password, contact)
         VALUES (?, ?, ?, ?)
         """,
-        (
-            "System Administrator",
-            "admin",
-            admin_password,
-            "Admin"
-        )
+        ("System Administrator", "admin", admin_password, "Admin")
     )
 
     conn.commit()
@@ -716,6 +742,148 @@ def init_database():
 
     ensure_tickets_for_old_reservations()
 
+
+# ═══════════════════════════════════════════════════════════════════════
+# NEW HELPER FUNCTIONS
+# ═══════════════════════════════════════════════════════════════════════
+
+def generate_vehicle_code(conn):
+    """
+    Returns the next sequential vehicle code as a zero-padded 3-digit string
+    (001, 002, …).  Never reuses codes from deleted vehicles.
+    """
+    row = conn.execute(
+        "SELECT COALESCE(MAX(CAST(vehicle_code AS INTEGER)), 0) AS max_code FROM vehicles"
+    ).fetchone()
+    next_num = int(row["max_code"]) + 1
+    return f"{next_num:03d}"
+
+
+def generate_booking_reference(conn):
+    """Returns a unique booking reference: BKF-YYYYMMDD-NNNN."""
+    date_str = datetime.datetime.now().strftime("%Y%m%d")
+    row = conn.execute(
+        "SELECT COUNT(*) AS cnt FROM reservations WHERE booking_reference LIKE ?",
+        (f"BKF-{date_str}-%",)
+    ).fetchone()
+    seq = int(row["cnt"]) + 1
+    return f"BKF-{date_str}-{seq:04d}"
+
+
+def get_fare_for_vehicle(conn, type_name, distance_km, passengers):
+    """
+    Calculates fare from the vehicle_types table.
+    Returns (fare, rate_per_km, fare_type).
+    Falls back to VEHICLE_RATES for unknown types.
+    """
+    row = conn.execute(
+        "SELECT fare_type, rate_per_km, fixed_fare FROM vehicle_types WHERE type_name = ?",
+        (type_name,)
+    ).fetchone()
+    if row:
+        if row["fare_type"] == "fixed":
+            return (round(float(row["fixed_fare"]), 2), 0.0, "fixed")
+        else:
+            rate = float(row["rate_per_km"])
+            fare = round(distance_km * rate * passengers, 2)
+            return (fare, rate, "distance")
+    # Fallback for legacy types (Motor, Airplane, Ferry)
+    rate = float(VEHICLE_RATES.get(type_name, 2.22))
+    return (round(distance_km * rate * passengers, 2), rate, "distance")
+
+
+def get_available_vehicle_types(conn):
+    """Returns all vehicle_types rows with live availability stats."""
+    rows = conn.execute(
+        "SELECT * FROM vehicle_types ORDER BY type_id"
+    ).fetchall()
+    result = []
+    for r in rows:
+        total = conn.execute(
+            "SELECT COUNT(*) AS c FROM vehicles WHERE vehicle_type=? AND is_active=1",
+            (r["type_name"],)
+        ).fetchone()["c"]
+        available = conn.execute(
+            "SELECT COUNT(*) AS c FROM vehicles WHERE vehicle_type=? AND is_active=1 AND status='Available'",
+            (r["type_name"],)
+        ).fetchone()["c"]
+        reserved = conn.execute(
+            "SELECT COUNT(*) AS c FROM vehicles WHERE vehicle_type=? AND is_active=1 AND status IN ('Reserved','In Use')",
+            (r["type_name"],)
+        ).fetchone()["c"]
+        result.append({
+            "type_id": r["type_id"],
+            "type_name": r["type_name"],
+            "fare_type": r["fare_type"],
+            "rate_per_km": r["rate_per_km"],
+            "fixed_fare": r["fixed_fare"],
+            "max_passengers": r["max_passengers"],
+            "is_available": r["is_available"],
+            "total_vehicles": total,
+            "available_vehicles": available,
+            "reserved_vehicles": reserved,
+        })
+    return result
+
+
+def assign_vehicle_to_reservation(conn, reservation_id):
+    """
+    On confirmation: assign the first available vehicle of the correct type
+    to the reservation and mark it Reserved.
+    Updates both the reservation and all its tickets.
+    """
+    r = conn.execute(
+        "SELECT vehicle, vehicle_code FROM reservations WHERE reservation_id=?",
+        (reservation_id,)
+    ).fetchone()
+    if not r:
+        return
+    if r["vehicle_code"]:
+        return  # already assigned
+
+    vehicle_row = conn.execute(
+        "SELECT vehicle_id, vehicle_code FROM vehicles "
+        "WHERE vehicle_type=? AND status='Available' AND is_active=1 "
+        "ORDER BY vehicle_id LIMIT 1",
+        (r["vehicle"],)
+    ).fetchone()
+    if not vehicle_row:
+        return  # no vehicle available — admin can assign manually later
+
+    code = vehicle_row["vehicle_code"]
+    conn.execute(
+        "UPDATE vehicles SET status='Reserved' WHERE vehicle_id=?",
+        (vehicle_row["vehicle_id"],)
+    )
+    conn.execute(
+        "UPDATE reservations SET vehicle_code=? WHERE reservation_id=?",
+        (code, reservation_id)
+    )
+    conn.execute(
+        "UPDATE tickets SET vehicle_code=? WHERE reservation_id=?",
+        (code, reservation_id)
+    )
+
+
+def release_vehicle_from_reservation(conn, reservation_id):
+    """
+    On cancellation/completion: release the vehicle back to Available.
+    """
+    r = conn.execute(
+        "SELECT vehicle_code FROM reservations WHERE reservation_id=?",
+        (reservation_id,)
+    ).fetchone()
+    if not r or not r["vehicle_code"]:
+        return
+    conn.execute(
+        "UPDATE vehicles SET status='Available' WHERE vehicle_code=? AND status='Reserved'",
+        (r["vehicle_code"],)
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ROUTES
+# ═══════════════════════════════════════════════════════════════════════
 
 @app.route("/", methods=["GET", "POST"])
 def login():
@@ -963,29 +1131,61 @@ def api_calculate_route():
         route = data["routes"][0]
         distance_km = route["distance"] / 1000.0
 
-        rate = float(VEHICLE_RATES.get(vehicle, 2.22))
-        if custom_rate_val:
+        # Look up rate from DB first, then fall back to hardcoded dict
+        conn = get_db()
+        fare, rate, fare_type = get_fare_for_vehicle(conn, vehicle, distance_km, passengers)
+        conn.close()
+
+        if custom_rate_val and fare_type != "fixed":
             try:
                 crate = float(custom_rate_val)
                 if crate > 0:
                     rate = crate
+                    fare = round(distance_km * rate * passengers, 2)
             except ValueError:
                 pass
 
-        total_fare = distance_km * rate * passengers
         return jsonify({
             "ok": True,
             "distance_km": round(distance_km, 2),
             "duration_minutes": round(route["duration"] / 60.0, 1),
             "geometry": route["geometry"],
             "rate_per_km": rate,
+            "fare_type": fare_type,
             "vehicle": vehicle,
             "passengers": passengers,
-            "fare_per_passenger": round(distance_km * rate, 2),
-            "total_fare": round(total_fare, 2)
+            "fare_per_passenger": round(fare / max(1, passengers), 2) if fare_type != "fixed" else fare,
+            "total_fare": fare
         })
     except Exception as e:
         return jsonify({"ok": False, "error": f"Route calculation failed: {e}"})
+
+
+@app.route("/api/calculate-fare")
+def api_calculate_fare():
+    """Server-side fare calculation used by the reservation form."""
+    try:
+        vehicle = request.args.get("vehicle", "").strip()
+        distance_km = float(request.args.get("distance", 0))
+        passengers = max(1, int(request.args.get("passengers", 1)))
+        if not vehicle:
+            return jsonify({"ok": False, "error": "Vehicle required."})
+        conn = get_db()
+        fare, rate, fare_type = get_fare_for_vehicle(conn, vehicle, distance_km, passengers)
+        vt = conn.execute(
+            "SELECT max_passengers FROM vehicle_types WHERE type_name=?", (vehicle,)
+        ).fetchone()
+        conn.close()
+        max_pass = vt["max_passengers"] if vt else VEHICLE_LIMITS.get(vehicle, 45)
+        return jsonify({
+            "ok": True,
+            "fare": fare,
+            "rate_per_km": rate,
+            "fare_type": fare_type,
+            "max_passengers": max_pass
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
 
 
 @app.route("/reservation", methods=["GET", "POST"])
@@ -1011,31 +1211,18 @@ def reservation():
             ]
 
             if not passenger_names:
-                old_name = request.form.get(
-                    "passenger_name",
-                    ""
-                ).strip()
-
+                old_name = request.form.get("passenger_name", "").strip()
                 if old_name:
                     passenger_names = [old_name]
 
             contact = request.form["contact"].strip()
-
-            starting_location = request.form[
-                "starting_location"
-            ].strip()
-
+            starting_location = request.form["starting_location"].strip()
             origin = request.form.get("origin", "").strip()
             destination = request.form["destination"].strip()
-
             travel_date = request.form["travel_date"]
             travel_time = request.form["travel_time"]
-
             vehicle = request.form["vehicle"]
-
-            passengers = int(
-                request.form["passengers"]
-            )
+            passengers = int(request.form["passengers"])
 
             calc_mode = request.form.get("calc_mode", "auto").strip()
             custom_dist_val = request.form.get("custom_distance", "").strip()
@@ -1043,232 +1230,162 @@ def reservation():
             distance = float(distance_value) if distance_value else 0.0
 
         except (KeyError, ValueError):
-            flash(
-                "Please complete all reservation fields correctly.",
-                "error"
-            )
+            flash("Please complete all reservation fields correctly.", "error")
             return redirect(url_for("reservation"))
 
         if not passenger_names:
-            flash(
-                "Please enter at least one passenger name.",
-                "error"
-            )
+            flash("Please enter at least one passenger name.", "error")
             return redirect(url_for("reservation"))
 
         if len(passenger_names) != passengers:
-            flash(
-                "The number of passenger names must match "
-                "the number of passengers.",
-                "error"
-            )
+            flash("The number of passenger names must match the number of passengers.", "error")
             return redirect(url_for("reservation"))
 
         passenger_name = passenger_names[0]
 
         if not contact:
-            flash(
-                "Contact number is required.",
-                "error"
-            )
+            flash("Contact number is required.", "error")
             return redirect(url_for("reservation"))
 
-        if vehicle not in VEHICLE_RATES:
-            flash(
-                "Invalid vehicle selected.",
-                "error"
-            )
+        # Validate vehicle against DB (and fall back to hardcoded for legacy types)
+        conn = get_db()
+        vt_row = conn.execute(
+            "SELECT * FROM vehicle_types WHERE type_name=? AND is_available=1",
+            (vehicle,)
+        ).fetchone()
+        conn.close()
+
+        if not vt_row and vehicle not in VEHICLE_RATES:
+            flash("Invalid or unavailable vehicle selected.", "error")
             return redirect(url_for("reservation"))
 
-        location_type = VEHICLE_LOCATION_TYPES.get(vehicle)
+        max_passengers_allowed = vt_row["max_passengers"] if vt_row else VEHICLE_LIMITS.get(vehicle, 45)
 
         if not starting_location or not destination:
-            flash(
-                "Please complete the location fields.",
-                "error"
-            )
+            flash("Please complete the location fields.", "error")
             return redirect(url_for("reservation"))
 
         if not origin:
             origin = starting_location
 
         if distance <= 0:
-            calculated_distance = calculate_distance_km(
-                starting_location,
-                destination
-            )
+            calculated_distance = calculate_distance_km(starting_location, destination)
             if calculated_distance is None or calculated_distance <= 0:
                 if origin and origin != starting_location:
-                    calculated_distance = calculate_distance_km(
-                        starting_location,
-                        origin
-                    )
+                    calculated_distance = calculate_distance_km(starting_location, origin)
             if calculated_distance is not None and calculated_distance > 0:
                 distance = round(calculated_distance, 1)
 
-        if distance <= 0:
-            flash(
-                "Distance could not be calculated. Please select or calculate distance.",
-                "error"
-            )
-            return redirect(url_for("reservation"))
-
-        if vehicle not in VEHICLE_RATES:
-            flash(
-                "Invalid vehicle selected.",
-                "error"
-            )
+        if distance <= 0 and (not vt_row or vt_row["fare_type"] != "fixed"):
+            flash("Distance could not be calculated. Please select or calculate distance.", "error")
             return redirect(url_for("reservation"))
 
         if passengers < 1:
-            flash(
-                "Passenger count must be at least 1.",
-                "error"
-            )
+            flash("Passenger count must be at least 1.", "error")
             return redirect(url_for("reservation"))
 
-        if passengers > VEHICLE_LIMITS[vehicle]:
-            flash(
-                f"{vehicle} can only accommodate "
-                f"{VEHICLE_LIMITS[vehicle]} passenger(s) "
-                f"per booking.",
-                "error"
-            )
+        if passengers > max_passengers_allowed:
+            flash(f"{vehicle} can only accommodate {max_passengers_allowed} passenger(s) per booking.", "error")
             return redirect(url_for("reservation"))
 
-        if distance <= 0:
-            flash(
-                "Distance must be greater than 0.",
-                "error"
-            )
-            return redirect(url_for("reservation"))
-
-        rate_per_km = VEHICLE_RATES[vehicle]
-        calc_mode = request.form.get("calc_mode", "auto").strip()
-        custom_rate_val = request.form.get("custom_rate", "").strip()
-        if calc_mode == "custom" and custom_rate_val:
-            try:
-                user_rate = float(custom_rate_val)
-                if user_rate > 0:
-                    rate_per_km = user_rate
-            except ValueError:
-                pass
-
-        fare = round(distance * rate_per_km * passengers, 2)
-
+        # Calculate fare from DB
         conn = get_db()
-
         try:
             conn.execute("BEGIN IMMEDIATE")
+
+            fare, rate_per_km, fare_type = get_fare_for_vehicle(conn, vehicle, distance, passengers)
+
+            # Allow custom rate in custom mode for distance-based vehicles
+            if calc_mode == "custom" and fare_type != "fixed":
+                custom_rate_val = request.form.get("custom_rate", "").strip()
+                if custom_rate_val:
+                    try:
+                        user_rate = float(custom_rate_val)
+                        if user_rate > 0:
+                            rate_per_km = user_rate
+                            fare = round(distance * rate_per_km * passengers, 2)
+                    except ValueError:
+                        pass
+
+            booking_reference = generate_booking_reference(conn)
             reservation_id = get_next_reservation_id(conn)
 
             conn.execute(
                 """
                 INSERT INTO reservations (
-                    reservation_id,
-                    user_id,
-                    passenger_name,
-                    passenger_names,
-                    contact,
-                    starting_location,
-                    origin,
-                    destination,
-                    travel_date,
-                    travel_time,
-                    vehicle,
-                    passengers,
-                    distance,
-                    fare,
-                    status
+                    reservation_id, user_id, passenger_name, passenger_names,
+                    contact, starting_location, origin, destination,
+                    travel_date, travel_time, vehicle, passengers,
+                    distance, fare, status, booking_reference
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    reservation_id,
-                    session["user_id"],
-                    passenger_name,
-                    json.dumps(
-                        passenger_names,
-                        ensure_ascii=False
-                    ),
-                    contact,
-                    starting_location,
-                    origin,
-                    destination,
-                    travel_date,
-                    travel_time,
-                    vehicle,
-                    passengers,
-                    distance,
-                    fare,
-                    "Pending"
+                    reservation_id, session["user_id"], passenger_name,
+                    json.dumps(passenger_names, ensure_ascii=False),
+                    contact, starting_location, origin, destination,
+                    travel_date, travel_time, vehicle, passengers,
+                    distance, fare, "Pending", booking_reference
                 )
             )
 
             reservation_row = conn.execute(
-                """
-                SELECT *
-                FROM reservations
-                WHERE reservation_id = ?
-                """,
+                "SELECT * FROM reservations WHERE reservation_id=?",
                 (reservation_id,)
             ).fetchone()
 
-            assign_seats(
-                conn,
-                reservation_row,
-                passengers
-            )
-
-            create_tickets_for_reservation(
-                conn,
-                reservation_id
-            )
-
+            assign_seats(conn, reservation_row, passengers)
+            create_tickets_for_reservation(conn, reservation_id)
             conn.commit()
 
         except ValueError as error:
             conn.rollback()
             conn.close()
-
-            flash(
-                str(error),
-                "error"
-            )
+            flash(str(error), "error")
             return redirect(url_for("reservation"))
 
         except sqlite3.Error as error:
             conn.rollback()
             conn.close()
-
-            flash(
-                f"Reservation could not be saved: {error}",
-                "error"
-            )
+            flash(f"Reservation could not be saved: {error}", "error")
             return redirect(url_for("reservation"))
 
         conn.close()
 
         flash(
-            f"Reservation submitted successfully! "
-            f"{passengers} individual ticket(s) were created "
-            f"with automatic seat assignment.",
+            f"Reservation submitted! Booking Ref: {booking_reference}. "
+            f"{passengers} ticket(s) created. Awaiting admin confirmation.",
             "success"
         )
+        return redirect(url_for("dashboard"))
 
-        return redirect(
-            url_for("dashboard")
-        )
+    # GET — fetch vehicle types from DB
+    conn = get_db()
+    db_vehicle_types = get_available_vehicle_types(conn)
+    conn.close()
+
+    # Build a rate dict for JS compatibility (includes legacy types)
+    combined_rates = dict(VEHICLE_RATES)
+    combined_limits = dict(VEHICLE_LIMITS)
+    combined_location_types = dict(VEHICLE_LOCATION_TYPES)
+    for vt in db_vehicle_types:
+        if vt["fare_type"] == "fixed":
+            combined_rates[vt["type_name"]] = vt["fixed_fare"]
+        else:
+            combined_rates[vt["type_name"]] = vt["rate_per_km"]
+        combined_limits[vt["type_name"]] = vt["max_passengers"]
+        combined_location_types[vt["type_name"]] = "land"
 
     return render_template(
         "reservation.html",
-        vehicle_rates=VEHICLE_RATES,
-        vehicle_limits=VEHICLE_LIMITS,
-        vehicle_capacity=VEHICLE_CAPACITY,
+        vehicle_rates=combined_rates,
+        vehicle_limits=combined_limits,
+        vehicle_capacity=combined_limits,
+        db_vehicle_types=db_vehicle_types,
         land_locations=LAND_LOCATIONS,
         airport_locations=AIRPORT_LOCATIONS,
         port_locations=PORT_LOCATIONS,
-        vehicle_location_types=VEHICLE_LOCATION_TYPES,
+        vehicle_location_types=combined_location_types,
         location_coordinates=LOCATION_COORDINATES,
         barangays_by_city=BARANGAYS_BY_CITY,
         terminals_by_city=TERMINALS_BY_CITY
@@ -1282,10 +1399,7 @@ def admin_dashboard():
         return redirect(url_for("login"))
 
     if session.get("username") != "admin":
-        flash(
-            "Admin access only.",
-            "error"
-        )
+        flash("Admin access only.", "error")
         return redirect(url_for("dashboard"))
 
     conn = get_db()
@@ -1304,36 +1418,35 @@ def admin_dashboard():
                 LIMIT 1
             ) AS first_ticket_number
         FROM reservations r
-        JOIN users u
-            ON r.user_id = u.user_id
+        JOIN users u ON r.user_id = u.user_id
         ORDER BY r.reservation_id DESC
         """
     ).fetchall()
 
     tickets = conn.execute(
         """
-        SELECT
-            t.*,
-            u.full_name AS account_name,
-            u.username
+        SELECT t.*, u.full_name AS account_name, u.username
         FROM tickets t
-        JOIN users u
-            ON t.user_id = u.user_id
+        JOIN users u ON t.user_id = u.user_id
         ORDER BY t.ticket_id DESC
         """
     ).fetchall()
 
     users = conn.execute(
-        """
-        SELECT
-            user_id,
-            full_name,
-            username,
-            contact
-        FROM users
-        ORDER BY user_id DESC
-        """
+        "SELECT user_id, full_name, username, contact FROM users ORDER BY user_id DESC"
     ).fetchall()
+
+    vehicles = conn.execute(
+        "SELECT * FROM vehicles WHERE is_active=1 ORDER BY vehicle_code"
+    ).fetchall()
+
+    vehicle_type_stats = get_available_vehicle_types(conn)
+
+    # Summary stats
+    total_res = conn.execute("SELECT COUNT(*) FROM reservations").fetchone()[0]
+    pending_res = conn.execute("SELECT COUNT(*) FROM reservations WHERE status='Pending'").fetchone()[0]
+    confirmed_res = conn.execute("SELECT COUNT(*) FROM reservations WHERE status='Confirmed'").fetchone()[0]
+    total_vehicles = conn.execute("SELECT COUNT(*) FROM vehicles WHERE is_active=1").fetchone()[0]
 
     conn.close()
 
@@ -1341,7 +1454,13 @@ def admin_dashboard():
         "admin.html",
         reservations=reservations,
         tickets=tickets,
-        users=users
+        users=users,
+        vehicles=vehicles,
+        vehicle_type_stats=vehicle_type_stats,
+        total_res=total_res,
+        pending_res=pending_res,
+        confirmed_res=confirmed_res,
+        total_vehicles=total_vehicles
     )
 
 
@@ -1385,54 +1504,44 @@ def update_status(reservation_id):
         conn.execute("BEGIN IMMEDIATE")
 
         conn.execute(
-            """
-            UPDATE reservations
-            SET status = ?
-            WHERE reservation_id = ?
-            """,
-            (
-                new_status,
-                reservation_id
-            )
+            "UPDATE reservations SET status=? WHERE reservation_id=?",
+            (new_status, reservation_id)
+        )
+        conn.execute(
+            "UPDATE tickets SET status=? WHERE reservation_id=?",
+            (new_status, reservation_id)
         )
 
-        conn.execute(
-            """
-            UPDATE tickets
-            SET status = ?
-            WHERE reservation_id = ?
-            """,
-            (
-                new_status,
-                reservation_id
-            )
-        )
+        # On confirmation: try to assign a vehicle
+        if new_status == "Confirmed":
+            assign_vehicle_to_reservation(conn, reservation_id)
+
+        # On cancellation or completion: release the vehicle
+        if new_status in ("Cancelled", "Completed"):
+            release_vehicle_from_reservation(conn, reservation_id)
+            if new_status == "Completed":
+                # Mark vehicle as Available again after trip completion
+                r = conn.execute(
+                    "SELECT vehicle_code FROM reservations WHERE reservation_id=?",
+                    (reservation_id,)
+                ).fetchone()
+                if r and r["vehicle_code"]:
+                    conn.execute(
+                        "UPDATE vehicles SET status='Available' WHERE vehicle_code=?",
+                        (r["vehicle_code"],)
+                    )
 
         conn.commit()
 
     except sqlite3.Error as error:
         conn.rollback()
         conn.close()
-
-        flash(
-            f"Status update failed: {error}",
-            "error"
-        )
-        return redirect(
-            url_for("admin_dashboard")
-        )
+        flash(f"Status update failed: {error}", "error")
+        return redirect(url_for("admin_dashboard"))
 
     conn.close()
-
-    flash(
-        f"Reservation #{reservation_id} status updated to "
-        f"{new_status}.",
-        "success"
-    )
-
-    return redirect(
-        url_for("admin_dashboard")
-    )
+    flash(f"Reservation #{reservation_id} status updated to {new_status}.", "success")
+    return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/reservation/edit/<int:reservation_id>", methods=["GET", "POST"])
@@ -1735,21 +1844,30 @@ def view_ticket(ticket_number):
         (ticket_number,)
     ).fetchone()
 
-    conn.close()
-
     if not ticket:
+        conn.close()
         abort(404)
 
     if "user_id" not in session:
+        conn.close()
         return redirect(url_for("login"))
 
     if session.get("username") != "admin":
         if ticket["user_id"] != session.get("user_id"):
+            conn.close()
             flash(
                 "You can only view your own ticket.",
                 "error"
             )
             return redirect(url_for("dashboard"))
+
+    # Also fetch the reservation for booking_reference
+    reservation = conn.execute(
+        "SELECT * FROM reservations WHERE reservation_id=?",
+        (ticket["reservation_id"],)
+    ).fetchone()
+
+    conn.close()
 
     qr_data_uri, verification_url = make_qr_data_uri(
         ticket["ticket_number"]
@@ -1758,6 +1876,7 @@ def view_ticket(ticket_number):
     return render_template(
         "ticket.html",
         ticket=ticket,
+        reservation=reservation,
         qr_data_uri=qr_data_uri,
         verification_url=verification_url
     )
@@ -1872,22 +1991,26 @@ def verify_ticket(ticket_number):
     ticket = conn.execute(
         """
         SELECT
-            ticket_id,
-            ticket_number,
-            reservation_id,
-            passenger_name,
-            contact,
-            starting_location,
-            origin,
-            destination,
-            travel_date,
-            travel_time,
-            vehicle,
-            seat_number,
-            fare,
-            status
-        FROM tickets
-        WHERE ticket_number = ?
+            t.ticket_id,
+            t.ticket_number,
+            t.reservation_id,
+            t.passenger_name,
+            t.contact,
+            t.starting_location,
+            t.origin,
+            t.destination,
+            t.travel_date,
+            t.travel_time,
+            t.vehicle,
+            t.seat_number,
+            t.fare,
+            t.status,
+            t.vehicle_code,
+            t.passengers,
+            r.booking_reference
+        FROM tickets t
+        LEFT JOIN reservations r ON t.reservation_id = r.reservation_id
+        WHERE t.ticket_number = ?
         """,
         (ticket_number,)
     ).fetchone()
@@ -1897,7 +2020,8 @@ def verify_ticket(ticket_number):
     response = make_response_with_no_cache(
         render_template(
             "verify.html",
-            ticket=ticket
+            ticket=ticket,
+            ticket_number=ticket_number
         )
     )
 
@@ -1927,6 +2051,202 @@ def logout():
     return redirect(
         url_for("login")
     )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ADMIN — VEHICLE TYPE MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route("/admin/vehicle-types")
+def admin_vehicle_types():
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+    conn = get_db()
+    types = get_available_vehicle_types(conn)
+    conn.close()
+    return render_template("admin_vehicle_types.html", vehicle_type_stats=types)
+
+
+@app.route("/admin/vehicle-types/edit/<int:type_id>", methods=["GET", "POST"])
+def admin_edit_vehicle_type(type_id):
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+    conn = get_db()
+    vt = conn.execute("SELECT * FROM vehicle_types WHERE type_id=?", (type_id,)).fetchone()
+    if not vt:
+        conn.close()
+        abort(404)
+    if request.method == "POST":
+        try:
+            fare_type = request.form.get("fare_type", "distance")
+            rate_per_km = float(request.form.get("rate_per_km", 0))
+            fixed_fare = float(request.form.get("fixed_fare", 0))
+            max_passengers = int(request.form.get("max_passengers", 45))
+            conn.execute(
+                """
+                UPDATE vehicle_types
+                SET fare_type=?, rate_per_km=?, fixed_fare=?, max_passengers=?
+                WHERE type_id=?
+                """,
+                (fare_type, rate_per_km, fixed_fare, max_passengers, type_id)
+            )
+            conn.commit()
+            conn.close()
+            flash(f"Vehicle type '{vt['type_name']}' pricing updated.", "success")
+            return redirect(url_for("admin_dashboard"))
+        except (ValueError, sqlite3.Error) as e:
+            conn.close()
+            flash(f"Update failed: {e}", "error")
+            return redirect(url_for("admin_edit_vehicle_type", type_id=type_id))
+    conn.close()
+    return render_template("admin_vehicle_type_form.html", vt=vt)
+
+
+@app.route("/admin/vehicle-types/toggle/<int:type_id>", methods=["POST"])
+def admin_toggle_vehicle_type(type_id):
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+    conn = get_db()
+    vt = conn.execute("SELECT type_name, is_available FROM vehicle_types WHERE type_id=?", (type_id,)).fetchone()
+    if not vt:
+        conn.close()
+        abort(404)
+    new_val = 0 if vt["is_available"] else 1
+    conn.execute("UPDATE vehicle_types SET is_available=? WHERE type_id=?", (new_val, type_id))
+    conn.commit()
+    conn.close()
+    state = "enabled" if new_val else "disabled"
+    flash(f"{vt['type_name']} availability {state}.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ADMIN — VEHICLE MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.route("/admin/vehicles")
+def admin_vehicles():
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+    conn = get_db()
+    vehicles = conn.execute(
+        "SELECT * FROM vehicles WHERE is_active=1 ORDER BY vehicle_code"
+    ).fetchall()
+    vehicle_type_stats = get_available_vehicle_types(conn)
+    conn.close()
+    return render_template("admin_vehicles.html", vehicles=vehicles, vehicle_type_stats=vehicle_type_stats)
+
+
+@app.route("/admin/vehicles/add", methods=["GET", "POST"])
+def admin_add_vehicle():
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+    conn = get_db()
+    vehicle_types = conn.execute("SELECT type_name FROM vehicle_types ORDER BY type_id").fetchall()
+    if request.method == "POST":
+        try:
+            vehicle_type = request.form["vehicle_type"].strip()
+            vehicle_name = request.form["vehicle_name"].strip()
+            plate_number = request.form.get("plate_number", "").strip()
+            capacity = int(request.form.get("capacity", 1))
+            assigned_driver = request.form.get("assigned_driver", "").strip()
+            status = request.form.get("status", "Available")
+            now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+            if not vehicle_type or not vehicle_name:
+                flash("Vehicle type and name are required.", "error")
+                return render_template("admin_vehicle_form.html", vehicle_types=vehicle_types, mode="add")
+
+            conn.execute("BEGIN IMMEDIATE")
+            vehicle_code = generate_vehicle_code(conn)
+            conn.execute(
+                """
+                INSERT INTO vehicles
+                (vehicle_code, vehicle_type, vehicle_name, plate_number,
+                 capacity, status, assigned_driver, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+                """,
+                (vehicle_code, vehicle_type, vehicle_name, plate_number,
+                 capacity, status, assigned_driver, now_str)
+            )
+            conn.commit()
+            conn.close()
+            flash(f"Vehicle registered with code {vehicle_code}.", "success")
+            return redirect(url_for("admin_vehicles"))
+        except sqlite3.IntegrityError:
+            conn.rollback()
+            conn.close()
+            flash("Plate number already exists.", "error")
+            return redirect(url_for("admin_add_vehicle"))
+        except (ValueError, sqlite3.Error) as e:
+            conn.rollback()
+            conn.close()
+            flash(f"Failed to add vehicle: {e}", "error")
+            return redirect(url_for("admin_add_vehicle"))
+    conn.close()
+    return render_template("admin_vehicle_form.html", vehicle_types=vehicle_types, mode="add")
+
+
+@app.route("/admin/vehicles/edit/<int:vehicle_id>", methods=["GET", "POST"])
+def admin_edit_vehicle(vehicle_id):
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+    conn = get_db()
+    vehicle = conn.execute(
+        "SELECT * FROM vehicles WHERE vehicle_id=? AND is_active=1", (vehicle_id,)
+    ).fetchone()
+    if not vehicle:
+        conn.close()
+        abort(404)
+    vehicle_types = conn.execute("SELECT type_name FROM vehicle_types ORDER BY type_id").fetchall()
+    if request.method == "POST":
+        try:
+            vehicle_type = request.form["vehicle_type"].strip()
+            vehicle_name = request.form["vehicle_name"].strip()
+            plate_number = request.form.get("plate_number", "").strip()
+            capacity = int(request.form.get("capacity", 1))
+            assigned_driver = request.form.get("assigned_driver", "").strip()
+            status = request.form.get("status", "Available")
+            conn.execute(
+                """
+                UPDATE vehicles
+                SET vehicle_type=?, vehicle_name=?, plate_number=?,
+                    capacity=?, status=?, assigned_driver=?
+                WHERE vehicle_id=?
+                """,
+                (vehicle_type, vehicle_name, plate_number,
+                 capacity, status, assigned_driver, vehicle_id)
+            )
+            conn.commit()
+            conn.close()
+            flash(f"Vehicle {vehicle['vehicle_code']} updated.", "success")
+            return redirect(url_for("admin_vehicles"))
+        except (ValueError, sqlite3.Error) as e:
+            conn.rollback()
+            conn.close()
+            flash(f"Failed to update vehicle: {e}", "error")
+            return redirect(url_for("admin_edit_vehicle", vehicle_id=vehicle_id))
+    conn.close()
+    return render_template("admin_vehicle_form.html", vehicle=vehicle, vehicle_types=vehicle_types, mode="edit")
+
+
+@app.route("/admin/vehicles/delete/<int:vehicle_id>", methods=["POST"])
+def admin_delete_vehicle(vehicle_id):
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+    conn = get_db()
+    conn.execute("UPDATE vehicles SET is_active=0 WHERE vehicle_id=?", (vehicle_id,))
+    conn.commit()
+    conn.close()
+    flash("Vehicle removed from the registry.", "success")
+    return redirect(url_for("admin_vehicles"))
 
 
 if __name__ == "__main__":

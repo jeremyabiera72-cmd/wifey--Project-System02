@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Edit' if mode == 'edit' else 'Register' }} Vehicle — Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
+        .form-wrap{width:100%;max-width:560px}
+        .back-link{display:inline-flex;align-items:center;gap:6px;color:#64748b;text-decoration:none;font-size:13px;margin-bottom:20px;transition:.15s}
+        .back-link:hover{color:#94a3b8}
+        .card{background:#1e293b;border:1px solid #334155;border-radius:16px;overflow:hidden}
+        .card-header{background:linear-gradient(135deg,#1e3a5f,#1e293b);padding:24px 28px;border-bottom:1px solid #334155}
+        .card-header h1{font-size:18px;font-weight:800;color:#f1f5f9}
+        .card-header p{font-size:13px;color:#64748b;margin-top:4px}
+        .card-body{padding:28px}
+        .field-group{margin-bottom:20px}
+        label{display:block;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+        input,select{width:100%;background:#0f172a;border:1px solid #334155;border-radius:9px;color:#e2e8f0;padding:10px 14px;font-size:14px;font-family:inherit;transition:.15s;outline:none}
+        input:focus,select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px #3b82f620}
+        select option{background:#0f172a}
+        .field-hint{font-size:12px;color:#475569;margin-top:5px}
+        .code-display{background:#0f172a;border:1px solid #334155;border-radius:9px;padding:12px 14px;font-family:monospace;font-size:20px;font-weight:800;color:#60a5fa;letter-spacing:2px;text-align:center;margin-bottom:6px}
+        .row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .btn-row{display:flex;gap:10px;margin-top:28px}
+        .btn{padding:11px 22px;border-radius:9px;font-size:14px;font-weight:700;border:0;cursor:pointer;text-decoration:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+        .btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
+        .btn-ghost{background:#334155;color:#94a3b8}.btn-ghost:hover{background:#475569;color:#e2e8f0}
+        .flash-msg{padding:12px 16px;border-radius:9px;font-size:13px;font-weight:500;margin-bottom:16px}
+        .flash-msg.success{background:#064e3b30;border:1px solid #059669;color:#34d399}
+        .flash-msg.error{background:#7f1d1d30;border:1px solid #dc2626;color:#f87171}
+    </style>
+</head>
+<body>
+<div class="form-wrap">
+    <a href="{{ url_for('admin_vehicles') }}" class="back-link">← Back to Vehicle Registry</a>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash-msg {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
+
+    <div class="card">
+        <div class="card-header">
+            <h1>{{ '🔧 Edit Vehicle' if mode == 'edit' else '🚌 Register New Vehicle' }}</h1>
+            <p>{{ 'Update vehicle information. Vehicle code cannot be changed.' if mode == 'edit' else 'A unique Vehicle Code will be automatically assigned upon registration.' }}</p>
+        </div>
+        <div class="card-body">
+
+            {% if mode == 'edit' and vehicle %}
+            <div class="field-group">
+                <label>Vehicle Code (Auto-Assigned)</label>
+                <div class="code-display">{{ vehicle['vehicle_code'] }}</div>
+                <p class="field-hint">This code is permanent and cannot be changed.</p>
+            </div>
+            {% else %}
+            <div class="field-group">
+                <label>Vehicle Code</label>
+                <div class="code-display">Auto</div>
+                <p class="field-hint">A sequential code (001, 002, …) will be automatically generated on save.</p>
+            </div>
+            {% endif %}
+
+            <form method="POST">
+                <div class="field-group">
+                    <label>Vehicle Type *</label>
+                    <select name="vehicle_type" required>
+                        <option value="">— Select Type —</option>
+                        {% for vt in vehicle_types %}
+                            <option value="{{ vt['type_name'] }}"
+                                {% if mode == 'edit' and vehicle and vehicle['vehicle_type'] == vt['type_name'] %}selected{% endif %}>
+                                {{ vt['type_name'] }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field-group">
+                    <label>Vehicle Name / Model *</label>
+                    <input type="text" name="vehicle_name" placeholder="e.g. Toyota Coaster, Hiace Commuter"
+                           value="{{ vehicle['vehicle_name'] if mode == 'edit' and vehicle else '' }}" required>
+                </div>
+
+                <div class="row-2">
+                    <div class="field-group">
+                        <label>Plate Number</label>
+                        <input type="text" name="plate_number" placeholder="e.g. ABC-1234"
+                               value="{{ vehicle['plate_number'] or '' if mode == 'edit' and vehicle else '' }}">
+                    </div>
+                    <div class="field-group">
+                        <label>Passenger Capacity</label>
+                        <input type="number" name="capacity" min="1" max="200" placeholder="e.g. 45"
+                               value="{{ vehicle['capacity'] if mode == 'edit' and vehicle else 1 }}" required>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label>Assigned Driver</label>
+                    <input type="text" name="assigned_driver" placeholder="Driver's full name (optional)"
+                           value="{{ vehicle['assigned_driver'] or '' if mode == 'edit' and vehicle else '' }}">
+                </div>
+
+                <div class="field-group">
+                    <label>Vehicle Status</label>
+                    <select name="status">
+                        {% for s in ['Available', 'Reserved', 'In Use', 'Maintenance', 'Unavailable'] %}
+                            <option value="{{ s }}"
+                                {% if mode == 'edit' and vehicle and vehicle['status'] == s %}selected{% endif %}>
+                                {{ s }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="btn-row">
+                    <button type="submit" class="btn btn-primary">
+                        {{ '💾 Save Changes' if mode == 'edit' else '✅ Register Vehicle' }}
+                    </button>
+                    <a href="{{ url_for('admin_vehicles') }}" class="btn btn-ghost">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
