@@ -209,6 +209,7 @@
                 <h2>⚙️ Available Vehicle Types</h2>
                 <div class="header-actions">
                     <span style="font-size:12px;color:#64748b">Manage pricing & availability per vehicle type</span>
+                    <a href="{{ url_for('admin_add_vehicle_type') }}" class="add-btn">+ Add Vehicle Type</a>
                 </div>
             </div>
             <div class="vt-grid">
@@ -239,10 +240,9 @@
                         </div>
                     </div>
                     <div class="vt-price">
-                        {% if vt.fare_type == 'fixed' %}
-                            Fare: <strong>₱{{ '%.2f'|format(vt.fixed_fare) }} fixed</strong>
-                        {% else %}
-                            Rate: <strong>₱{{ '%.2f'|format(vt.rate_per_km) }}/km</strong>
+                        {{ vt.price_label }}
+                        {% if not vt.fare_configured %}
+                            <span style="color:#f87171;font-weight:700">— not bookable until priced</span>
                         {% endif %}
                     </div>
                     <div class="vt-actions">

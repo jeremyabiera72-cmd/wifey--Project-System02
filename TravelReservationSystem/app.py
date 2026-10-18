@@ -15,6 +15,7 @@ import hashlib
 import io
 import base64
 import json
+import math
 import os
 import urllib.request
 import urllib.parse
@@ -32,40 +33,19 @@ app.secret_key = "travel_reservation_secret_key"
 
 DATABASE = os.path.join(BASE_DIR, "travel_reservation.db")
 
-VEHICLE_RATES = {
-    "Bus": 2.22,
-    "Van": 2,
-    "Private Van": 2.0,
-    "Taxi": 13.50,
-    "Motor": 7,
-    "Airplane": 50,
-    "Ferry": 20
-}
+# Vehicle types, capacities and every price live in the vehicle_types table so
+# the admin can add a type without a code change. These are the only allowed
+# values for the columns that choose how a fare is assembled.
+CHARGE_BASES = ("per_passenger", "per_booking")
+LOCATION_TYPES = ("land", "air", "sea")
 
-VEHICLE_LIMITS = {
-    "Bus": 45,
-    "Van": 12,
-    "Private Van": 10,
-    "Taxi": 4,
-    "Motor": 1,
-    "Airplane": 180,
-    "Ferry": 57
-}
-
-VEHICLE_CAPACITY = {
-    "Bus": 45,
-    "Van": 12,
-    "Private Van": 10,
-    "Taxi": 4,
-    "Motor": 1,
-    "Airplane": 180,
-    "Ferry": 57
-}
+# Sanity bounds for a trip distance the server has to accept without re-routing.
+MAX_TRIP_KM = 2000.0
+ROAD_FACTOR = 3.0
 
 LAND_LOCATIONS = ['Molave', 'Pagadian City', 'Ipil', 'Zamboanga City', 'Dipolog City', 'Dapitan City', 'Iligan City', 'Ozamiz City', 'Cagayan de Oro City', 'Malaybalay City', 'Valencia City', 'Gingoog City', 'Butuan City', 'Surigao City', 'Davao City', 'Tagum City', 'Panabo City', 'Digos City', 'Mati City', 'General Santos City', 'Koronadal City', 'Kidapawan City', 'Tacurong City', 'Cotabato City', 'Alicia', 'Buug', 'Diplahan', 'Imelda', 'Kabasalan', 'Mabuhay', 'Malangas', 'Naga', 'Olutanga', 'Payao', 'Roseller Lim', 'Siay', 'Talusan', 'Tungawan', 'Aurora', 'Dumingag', 'Guipos', 'Josefina', 'Kumalarang', 'Labangan', 'Lakewood', 'Lapuyan', 'Mahayag', 'Midsalip', 'Ramon Magsaysay', 'San Miguel', 'San Pablo', 'Sominot', 'Tabina', 'Tambulig', 'Tukuran', 'Vincenzo A. Sagun', 'Aloran', 'Baliangao', 'Bonifacio', 'Calamba', 'Clarin', 'Concepcion', 'Don Victoriano Chiongbian', 'Jimenez', 'Lopez Jaena', 'Panaon', 'Plaridel', 'Sapang Dalaga', 'Sinacaban', 'Tangub City', 'Tudela', 'Baungon', 'Cabanglasan', 'Damulog', 'Dangcagan', 'Don Carlos', 'Impasug-ong', 'Kibawe', 'Kitaotao', 'Lantapan', 'Libona', 'Malitbog', 'Manolo Fortich', 'Maramag', 'Pangantucan', 'Quezon', 'San Fernando', 'Sumilao', 'Talakag', 'Asuncion', 'Braulio E. Dujali', 'Carmen', 'Kapalong', 'Laak', 'Maco', 'Mawab', 'Monkayo', 'Montevista', 'New Bataan', 'New Corella', 'San Isidro', 'Santo Tomas', 'Talaingod', 'Baganga', 'Banaybanay', 'Boston', 'Caraga', 'Cateel', 'Lupon', 'Manay', 'Governor Generoso', 'Bansalan', 'Hagonoy', 'Kiblawan', 'Magsaysay', 'Malalag', 'Padada', 'Santa Cruz', 'Sulop', 'Alabel', 'Glan', 'Kiamba', 'Maasim', 'Malapatan', 'Malungon', 'Polomolok', 'Sarangani', 'Tupi', 'Banga', 'Lake Sebu', 'Norala', 'Santo Nino', 'Surallah', 'Tampakan', 'Tantangan', 'Tboli', 'Arakan', 'Banisilan', 'Kabacan', 'Libungan', 'Matalam', 'Makilala', 'Magpet', 'Mlang', 'Midsayap', 'Pigcawayan', 'Pikit', 'President Roxas', 'Aleosan', 'Alamada', 'Antipas', 'Buldon', 'Datu Abdullah Sangki', 'Datu Anggal Midtimbang', 'Datu Blah T. Sinsuat', 'Datu Hoffer Ampatuan', 'Datu Montawal', 'Datu Odin Sinsuat', 'Datu Paglas', 'Datu Piang', 'Datu Salibo', 'Datu Saudi Ampatuan', 'Datu Unsay', 'General Salipada K. Pendatun', 'Guindulungan', 'Kadayangan', 'Lambayong', 'Lantawan', 'Maguing', 'Malabang', 'Matanog', 'Pagalungan', 'Pagagawan', 'Parang', 'Patikul', 'Picong', 'Rajah Buayan', 'Sultan Kudarat', 'Sultan Mastura', 'Talayan', 'Upi', 'Wao', 'Buenavista', 'Cabadbaran City', 'Claver', 'Dinagat', 'Esperanza', 'Gigaquit', 'Hinatuan', 'Jabonga', 'Kitcharao', 'Las Nieves', 'Lianga', 'Loreto', 'Madrid', 'Mainit', 'Malimono', 'Nasipit', 'Placer', 'Prosperidad', 'San Francisco', 'San Francisco (Agusan del Sur)', 'San Francisco, Agusan del Sur', 'Bayugan City', 'Trento', 'Rosario', 'Bunawan', 'San Jose', 'San Luis', 'Santa Monica', 'Sibagat', 'Sison', 'Socorro', 'Tagana-an', 'Tubod', 'Veruela', 'Bacuag', 'Basilisa', 'Carrascal', 'Cortes', 'Del Carmen', 'Dapa', 'General Luna', 'Libjo', 'Limasawa', 'Pilar', 'San Benito', 'San Juan', 'Surigao del Norte', 'Tago', 'Barobo', 'Bayabas', 'Cagwait', 'Lanuza', 'Lingig', 'Marihatag', 'San Agustin', 'Tagbina', 'Tandag City']
 AIRPORT_LOCATIONS = ["Zamboanga International Airport","Pagadian Airport","Dipolog Airport","Laguindingan Airport","Labo Airport (Ozamiz)","Francisco Bangoy International Airport","General Santos International Airport","Cotabato Airport","Butuan Airport","Surigao Airport","Siargao Airport","Tandag Airport"]
 PORT_LOCATIONS = ["Port of Zamboanga","Port of Iligan","Port of Cagayan de Oro","Port of Ozamiz","Port of Davao","Port of General Santos","Port of Surigao","Port of Dapitan","Port of Nasipit"]
-VEHICLE_LOCATION_TYPES = {"Bus":"land","Van":"land","Private Van":"land","Taxi":"land","Motor":"land","Airplane":"air","Ferry":"sea"}
 ALL_MINDANAO_LAND_LOCATIONS = sorted(set(LAND_LOCATIONS))
 
 BARANGAYS_BY_CITY = {
@@ -177,22 +157,25 @@ def get_location_coordinates(location):
     return None
 
 
+def haversine_km(lat1, lon1, lat2, lon2):
+    """Straight-line distance between two coordinates in kilometers."""
+    r = 6371.0088
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    x = (math.sin(dlat / 2) ** 2 +
+         math.cos(phi1) * math.cos(phi2) * math.sin(dlon / 2) ** 2)
+    return r * 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x))
+
+
 def calculate_distance_km(starting_location, destination):
-    """Calculate approximate straight-line distance in kilometers."""
+    """Approximate straight-line distance between two known places."""
     a = get_location_coordinates(starting_location)
     b = get_location_coordinates(destination)
     if not a or not b:
         return None
-
-    import math
-    r = 6371.0088
-    lat1 = math.radians(a[0])
-    lat2 = math.radians(b[0])
-    dlat = math.radians(b[0] - a[0])
-    dlon = math.radians(b[1] - a[1])
-    x = (math.sin(dlat / 2) ** 2 +
-         math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2)
-    return r * 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x))
+    return haversine_km(a[0], a[1], b[0], b[1])
 
 def get_db():
     conn = sqlite3.connect(DATABASE, timeout=30)
@@ -204,19 +187,65 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+def has_column(cursor, table_name, column_name):
+    """True when the table already carries the given column."""
+    return any(
+        row["name"] == column_name
+        for row in cursor.execute(f"PRAGMA table_info({table_name})").fetchall()
+    )
+
+
 def add_missing_column(cursor, table_name, column_name, column_definition):
     """Safely add a column to an existing SQLite database."""
-    columns = cursor.execute(
-        f"PRAGMA table_info({table_name})"
-    ).fetchall()
-
-    existing_columns = {row["name"] for row in columns}
-
-    if column_name not in existing_columns:
+    if not has_column(cursor, table_name, column_name):
         cursor.execute(
             f"ALTER TABLE {table_name} ADD COLUMN "
             f"{column_name} {column_definition}"
         )
+
+
+def migrate_legacy_fare_columns(cursor):
+    """
+    Fold the old three-mode pricing (fare_type + fixed_fare + rate_per_km) into
+    the single configurable engine, then drop the columns it replaced. Runs only
+    on databases that still have them, so it is a no-op afterwards.
+    """
+    if not has_column(cursor, "vehicle_types", "fare_type"):
+        return
+
+    # A 'fixed' charter price becomes the base fare of a per-booking type;
+    # 'distance' types charge every passenger, as they always did.
+    cursor.execute(
+        """
+        UPDATE vehicle_types
+        SET base_fare = CASE
+                WHEN fare_type = 'fixed' AND base_fare = 0 THEN fixed_fare
+                ELSE base_fare
+            END,
+            rate_per_km = CASE WHEN fare_type = 'fixed' THEN 0 ELSE rate_per_km END,
+            included_distance = CASE WHEN fare_type = 'fixed' THEN 0 ELSE included_distance END,
+            charge_basis = CASE WHEN fare_type = 'distance'
+                                THEN 'per_passenger' ELSE 'per_booking' END,
+            fare_configured = 1
+        """
+    )
+
+    # The land/air/sea split used to live in a Python dict; give each type its own
+    # value before that dict goes away.
+    cursor.execute(
+        """
+        UPDATE vehicle_types
+        SET location_type = CASE
+                WHEN type_name IN ('Airplane', 'Plane') THEN 'air'
+                WHEN type_name IN ('Ferry', 'Boat', 'Ship') THEN 'sea'
+                ELSE 'land'
+            END
+        WHERE location_type IS NULL OR location_type = ''
+        """
+    )
+
+    cursor.execute("ALTER TABLE vehicle_types DROP COLUMN fare_type")
+    cursor.execute("ALTER TABLE vehicle_types DROP COLUMN fixed_fare")
 
 
 def get_booking_type(vehicle):
@@ -306,15 +335,22 @@ def create_ticket_number(reservation_id, passenger_index):
     return f"TRS-{reservation_id:06d}-{passenger_index:02d}"
 
 
-def get_seat_list(vehicle):
+def get_seat_list(vehicle, capacity=None):
     """
     Generates realistic seat/slot labels.
+
+    Vehicle types the admin adds have no hand-written seat layout, so they fall
+    back to one generic seat per allowed passenger.
     """
     if vehicle == "Bus":
         return [f"A{i}" for i in range(1, 46)]
 
     if vehicle == "Van":
         return [f"V{i}" for i in range(1, 13)]
+
+    if vehicle == "Private Van":
+        total = int(capacity) if capacity else 10
+        return [f"PV{i}" for i in range(1, total + 1)]
 
     if vehicle == "Taxi":
         return [f"T{i}" for i in range(1, 5)]
@@ -332,7 +368,19 @@ def get_seat_list(vehicle):
     if vehicle == "Ferry":
         return [f"B{i}" for i in range(1, 58)]
 
+    if capacity:
+        return [f"S{i}" for i in range(1, int(capacity) + 1)]
+
     return []
+
+
+def get_seat_capacity(conn, vehicle):
+    """How many seats this vehicle type may sell, per the admin's setting."""
+    row = conn.execute(
+        "SELECT max_passengers FROM vehicle_types WHERE type_name = ?",
+        (vehicle,)
+    ).fetchone()
+    return int(row["max_passengers"]) if row and row["max_passengers"] else 0
 
 
 def get_trip_key(reservation):
@@ -357,7 +405,7 @@ def assign_seats(conn, reservation, number_of_passengers):
     Cancelled tickets are ignored, so their seats become available again.
     """
     vehicle = reservation["vehicle"]
-    available_seats = get_seat_list(vehicle)
+    available_seats = get_seat_list(vehicle, get_seat_capacity(conn, vehicle))
 
     if len(available_seats) < number_of_passengers:
         raise ValueError(f"{vehicle} does not have enough available seats.")
@@ -547,7 +595,7 @@ def create_tickets_for_reservation(conn, reservation_id):
                 reservation["travel_time"],
                 reservation["vehicle"],
                 seats[index],
-                float(reservation["fare"]) / max(1, number_of_passengers),
+                round(float(reservation["fare"]) / max(1, number_of_passengers), 2),
                 reservation["status"],
                 get_booking_type(reservation["vehicle"]),
                 number_of_passengers,
@@ -676,19 +724,43 @@ def init_database():
     )
 
     # ── vehicle_types table ──────────────────────────────────────────────
+    # Every row is priced by the same engine (see get_fare_breakdown):
+    #   trip fare  = max(min_fare, base_fare + max(0, km - included_distance) * rate_per_km)
+    #   total fare = trip fare x passengers (per_passenger) or once (per_booking),
+    #                plus extra_charges
     cursor.execute(
         """
         CREATE TABLE IF NOT EXISTS vehicle_types (
             type_id INTEGER PRIMARY KEY AUTOINCREMENT,
             type_name TEXT UNIQUE NOT NULL,
-            fare_type TEXT NOT NULL DEFAULT 'distance',
-            rate_per_km REAL DEFAULT 2.22,
-            fixed_fare REAL DEFAULT 0,
+            base_fare REAL NOT NULL DEFAULT 0,
+            included_distance REAL NOT NULL DEFAULT 0,
+            rate_per_km REAL NOT NULL DEFAULT 0,
+            min_fare REAL NOT NULL DEFAULT 0,
+            extra_charges REAL NOT NULL DEFAULT 0,
+            extra_charges_label TEXT DEFAULT '',
+            charge_basis TEXT NOT NULL DEFAULT 'per_booking',
             max_passengers INTEGER DEFAULT 45,
+            location_type TEXT DEFAULT 'land',
+            fare_configured INTEGER NOT NULL DEFAULT 0,
             is_available INTEGER DEFAULT 1
         )
         """
     )
+
+    for column, definition in (
+        ("base_fare", "REAL NOT NULL DEFAULT 0"),
+        ("included_distance", "REAL NOT NULL DEFAULT 0"),
+        ("min_fare", "REAL NOT NULL DEFAULT 0"),
+        ("extra_charges", "REAL NOT NULL DEFAULT 0"),
+        ("extra_charges_label", "TEXT DEFAULT ''"),
+        ("charge_basis", "TEXT NOT NULL DEFAULT 'per_booking'"),
+        ("location_type", "TEXT DEFAULT 'land'"),
+        ("fare_configured", "INTEGER NOT NULL DEFAULT 0"),
+    ):
+        add_missing_column(cursor, "vehicle_types", column, definition)
+
+    migrate_legacy_fare_columns(cursor)
 
     # Seed default vehicle types if empty
     existing_types = cursor.execute(
@@ -698,14 +770,15 @@ def init_database():
         cursor.executemany(
             """
             INSERT OR IGNORE INTO vehicle_types
-            (type_name, fare_type, rate_per_km, fixed_fare, max_passengers, is_available)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (type_name, base_fare, included_distance, rate_per_km, min_fare,
+             charge_basis, max_passengers, location_type, fare_configured, is_available)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1)
             """,
             [
-                ("Bus",         "distance", 2.22,  0.0,    45, 1),
-                ("Van",         "distance", 2.0,   0.0,    12, 1),
-                ("Private Van", "fixed",    0.0,   1500.0, 10, 1),
-                ("Taxi",        "distance", 13.50, 0.0,     4, 1),
+                ("Bus",         0.0,    0.0,  2.22, 0.0, "per_passenger", 45, "land"),
+                ("Van",         0.0,    0.0,  2.0,  0.0, "per_passenger", 12, "land"),
+                ("Private Van", 1500.0, 25.0, 45.0, 0.0, "per_booking",   10, "land"),
+                ("Taxi",        0.0,    0.0,  13.50, 0.0, "per_passenger",  4, "land"),
             ]
         )
 
@@ -770,60 +843,261 @@ def generate_booking_reference(conn):
     return f"BKF-{date_str}-{seq:04d}"
 
 
-def get_fare_for_vehicle(conn, type_name, distance_km, passengers):
-    """
-    Calculates fare from the vehicle_types table.
-    Returns (fare, rate_per_km, fare_type).
-    Falls back to VEHICLE_RATES for unknown types.
-    """
-    row = conn.execute(
-        "SELECT fare_type, rate_per_km, fixed_fare FROM vehicle_types WHERE type_name = ?",
-        (type_name,)
+class FareNotConfigured(ValueError):
+    """A vehicle type has no admin-configured pricing yet."""
+
+
+def get_vehicle_type(conn, type_name):
+    return conn.execute(
+        "SELECT * FROM vehicle_types WHERE type_name = ?", (type_name,)
     ).fetchone()
-    if row:
-        if row["fare_type"] == "fixed":
-            return (round(float(row["fixed_fare"]), 2), 0.0, "fixed")
+
+
+def get_fare_breakdown(conn, type_name, distance_km, passengers):
+    """
+    The pricing engine behind every vehicle type, driven entirely by that type's
+    vehicle_types row:
+
+        trip fare  = max(min_fare,
+                         base_fare + max(0, km - included_distance) * rate_per_km)
+        total fare = trip fare x passengers   (charge_basis = per_passenger)
+                   = trip fare                (charge_basis = per_booking)
+                   + extra_charges
+
+    Returning the whole breakdown keeps the pre-booking estimate, the stored
+    reservation, the ticket and the receipt showing the same numbers.
+    """
+    try:
+        distance_km = max(0.0, float(distance_km or 0))
+    except (TypeError, ValueError):
+        distance_km = 0.0
+
+    try:
+        passengers = max(1, int(passengers or 1))
+    except (TypeError, ValueError):
+        passengers = 1
+
+    row = get_vehicle_type(conn, type_name)
+    if row is None:
+        raise FareNotConfigured(f"'{type_name}' is not a vehicle type in the system.")
+    if not row["fare_configured"]:
+        raise FareNotConfigured(
+            f"{type_name} has no fare configuration yet, so it cannot be priced. "
+            "An admin must set its rates first."
+        )
+
+    base_fare = float(row["base_fare"] or 0)
+    included_distance = float(row["included_distance"] or 0)
+    rate_per_km = float(row["rate_per_km"] or 0)
+    min_fare = float(row["min_fare"] or 0)
+    extra_charges = float(row["extra_charges"] or 0)
+    charge_basis = (
+        row["charge_basis"]
+        if row["charge_basis"] in CHARGE_BASES
+        else "per_booking"
+    )
+
+    extra_distance = max(0.0, distance_km - included_distance)
+    distance_charge = extra_distance * rate_per_km
+    trip_fare = max(min_fare, base_fare + distance_charge)
+    charged_times = passengers if charge_basis == "per_passenger" else 1
+
+    return {
+        "type_name": type_name,
+        "charge_basis": charge_basis,
+        "max_passengers": int(row["max_passengers"] or 1),
+        "location_type": row["location_type"] or "land",
+        "distance_km": round(distance_km, 2),
+        "passengers": passengers,
+        "base_fare": round(base_fare, 2),
+        "included_distance": round(included_distance, 2),
+        "extra_distance": round(extra_distance, 2),
+        "rate_per_km": round(rate_per_km, 2),
+        "distance_charge": round(distance_charge, 2),
+        "min_fare": round(min_fare, 2),
+        "minimum_fare_applied": min_fare > base_fare + distance_charge,
+        "trip_fare": round(trip_fare, 2),
+        "extra_charges": round(extra_charges, 2),
+        "extra_charges_label": (row["extra_charges_label"] or "").strip(),
+        "subtotal": round(trip_fare * charged_times, 2),
+        "total_fare": round(trip_fare * charged_times + extra_charges, 2),
+        "fare_per_passenger": round(
+            (trip_fare * charged_times + extra_charges) / passengers, 2
+        ),
+    }
+
+
+def fare_price_label(vt):
+    """
+    One-line description of how a type is priced, used by the vehicle pickers and
+    the admin list so no template or script re-derives its own wording.
+    """
+    parts = []
+
+    if vt["base_fare"]:
+        text = f"₱{vt['base_fare']:,.2f} base"
+        if vt["included_distance"]:
+            text += f" (first {vt['included_distance']:g} km)"
+        parts.append(text)
+
+    if vt["rate_per_km"]:
+        if vt["base_fare"] and vt["included_distance"]:
+            parts.append(f"₱{vt['rate_per_km']:,.2f}/km after {vt['included_distance']:g} km")
+        elif vt["included_distance"]:
+            parts.append(f"₱{vt['rate_per_km']:,.2f}/km beyond {vt['included_distance']:g} km")
         else:
-            rate = float(row["rate_per_km"])
-            fare = round(distance_km * rate * passengers, 2)
-            return (fare, rate, "distance")
-    # Fallback for legacy types (Motor, Airplane, Ferry)
-    rate = float(VEHICLE_RATES.get(type_name, 2.22))
-    return (round(distance_km * rate * passengers, 2), rate, "distance")
+            parts.append(f"₱{vt['rate_per_km']:,.2f}/km")
+
+    if vt["min_fare"]:
+        parts.append(f"min ₱{vt['min_fare']:,.2f}")
+
+    if vt["extra_charges"]:
+        parts.append(
+            f"+₱{vt['extra_charges']:,.2f} {vt['extra_charges_label'] or 'fees'}"
+        )
+
+    if not parts:
+        return "Fare not configured"
+
+    basis = "per passenger" if vt["charge_basis"] == "per_passenger" else "per booking"
+    return " · ".join(parts) + f" · {basis}"
+
+
+def get_vehicle_type_settings(conn):
+    """
+    Vehicle types as the booking forms need them: pricing, capacity and the
+    land/air/sea location source, all straight from the database.
+    """
+    rows = conn.execute(
+        "SELECT * FROM vehicle_types ORDER BY type_id"
+    ).fetchall()
+    settings = []
+    for r in rows:
+        vt = {
+            "type_id": r["type_id"],
+            "type_name": r["type_name"],
+            "base_fare": float(r["base_fare"] or 0),
+            "included_distance": float(r["included_distance"] or 0),
+            "rate_per_km": float(r["rate_per_km"] or 0),
+            "min_fare": float(r["min_fare"] or 0),
+            "extra_charges": float(r["extra_charges"] or 0),
+            "extra_charges_label": (r["extra_charges_label"] or "").strip(),
+            "charge_basis": r["charge_basis"] or "per_booking",
+            "max_passengers": int(r["max_passengers"] or 1),
+            "location_type": r["location_type"] or "land",
+            "fare_configured": bool(r["fare_configured"]),
+            "is_available": r["is_available"],
+            "booking_type": get_booking_type(r["type_name"]),
+        }
+        vt["bookable"] = vt["fare_configured"] and bool(vt["is_available"])
+        vt["price_label"] = fare_price_label(vt)
+        settings.append(vt)
+    return settings
+
+
+def fetch_osrm_route(pickup, destination):
+    """
+    Driving route between two (lat, lon) tuples from the public OSRM demo
+    server, or None when the service is unreachable or finds no road.
+    """
+    lon1, lat1 = pickup[1], pickup[0]
+    lon2, lat2 = destination[1], destination[0]
+    url = (
+        "https://router.project-osrm.org/route/v1/driving/"
+        f"{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
+    )
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "TravelReservationSystem/1.0 (contact: local-app)"},
+        )
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except (OSError, ValueError):
+        return None
+
+    if data.get("code") != "Ok" or not data.get("routes"):
+        return None
+    route = data["routes"][0]
+    return {
+        "distance_km": route["distance"] / 1000.0,
+        "duration_minutes": route["duration"] / 60.0,
+        "geometry": route["geometry"],
+    }
+
+
+def read_coordinate(lat, lon):
+    """A (lat, lon) tuple from submitted form values, or None if not usable."""
+    try:
+        point = (float(lat), float(lon))
+    except (TypeError, ValueError):
+        return None
+    if not all(math.isfinite(value) for value in point):
+        return None
+    if abs(point[0]) > 90 or abs(point[1]) > 180:
+        return None
+    return point
+
+
+def resolve_trip_distance(submitted_km, pickup=None, destination=None,
+                          starting_location="", destination_name=""):
+    """
+    The distance the server is willing to price a trip at.
+
+    The browser measures the route for the estimate, but a booking is only
+    trusted once it is measured here too: the map coordinates are re-routed, and
+    when the route service is unavailable the submitted figure survives only if
+    it is plausible next to the straight-line gap between the two points.
+    """
+    try:
+        submitted_km = float(submitted_km or 0)
+    except (TypeError, ValueError):
+        submitted_km = 0.0
+
+    straight_km = None
+    if pickup and destination:
+        straight_km = haversine_km(pickup[0], pickup[1], destination[0], destination[1])
+        route = fetch_osrm_route(pickup, destination)
+        if route:
+            return round(min(route["distance_km"], MAX_TRIP_KM), 2)
+
+    if straight_km is None:
+        straight_km = calculate_distance_km(starting_location, destination_name)
+
+    if submitted_km > 0:
+        if straight_km:
+            # Roads cannot beat a straight line, and rarely run three times longer.
+            submitted_km = min(
+                max(submitted_km, straight_km), straight_km * ROAD_FACTOR
+            )
+        return round(min(submitted_km, MAX_TRIP_KM), 2)
+
+    return round(min(straight_km or 0.0, MAX_TRIP_KM), 2)
 
 
 def get_available_vehicle_types(conn):
     """Returns all vehicle_types rows with live availability stats."""
-    rows = conn.execute(
-        "SELECT * FROM vehicle_types ORDER BY type_id"
-    ).fetchall()
-    result = []
-    for r in rows:
-        total = conn.execute(
-            "SELECT COUNT(*) AS c FROM vehicles WHERE vehicle_type=? AND is_active=1",
-            (r["type_name"],)
-        ).fetchone()["c"]
-        available = conn.execute(
-            "SELECT COUNT(*) AS c FROM vehicles WHERE vehicle_type=? AND is_active=1 AND status='Available'",
-            (r["type_name"],)
-        ).fetchone()["c"]
-        reserved = conn.execute(
-            "SELECT COUNT(*) AS c FROM vehicles WHERE vehicle_type=? AND is_active=1 AND status IN ('Reserved','In Use')",
-            (r["type_name"],)
-        ).fetchone()["c"]
-        result.append({
-            "type_id": r["type_id"],
-            "type_name": r["type_name"],
-            "fare_type": r["fare_type"],
-            "rate_per_km": r["rate_per_km"],
-            "fixed_fare": r["fixed_fare"],
-            "max_passengers": r["max_passengers"],
-            "is_available": r["is_available"],
-            "total_vehicles": total,
-            "available_vehicles": available,
-            "reserved_vehicles": reserved,
-        })
-    return result
+    vehicle_stats = {}
+    for r in conn.execute(
+        """
+        SELECT vehicle_type,
+               COUNT(*) AS total,
+               SUM(CASE WHEN status='Available' THEN 1 ELSE 0 END) AS available,
+               SUM(CASE WHEN status IN ('Reserved','In Use') THEN 1 ELSE 0 END) AS reserved
+        FROM vehicles
+        WHERE is_active=1
+        GROUP BY vehicle_type
+        """
+    ).fetchall():
+        vehicle_stats[r["vehicle_type"]] = r
+
+    settings = get_vehicle_type_settings(conn)
+    for vt in settings:
+        stats = vehicle_stats.get(vt["type_name"])
+        vt["total_vehicles"] = int(stats["total"]) if stats else 0
+        vt["available_vehicles"] = int(stats["available"] or 0) if stats else 0
+        vt["reserved_vehicles"] = int(stats["reserved"] or 0) if stats else 0
+    return settings
 
 
 def assign_vehicle_to_reservation(conn, reservation_id):
@@ -1113,79 +1387,71 @@ def api_search_address():
 
 @app.route("/api/calculate-route")
 def api_calculate_route():
+    """Route + fare estimate for the booking form. Nothing here is saved."""
     try:
         lat1 = float(request.args.get("lat1"))
         lon1 = float(request.args.get("lon1"))
         lat2 = float(request.args.get("lat2"))
         lon2 = float(request.args.get("lon2"))
-        vehicle = request.args.get("vehicle", "Bus")
+        vehicle = request.args.get("vehicle", "").strip()
         passengers = max(1, int(request.args.get("passengers", 1)))
-        custom_rate_val = request.args.get("custom_rate")
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Invalid route or vehicle request."})
 
-        url = f"https://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
-        req = urllib.request.Request(url, headers={"User-Agent": "TravelReservationSystem/1.0 (contact: local-app)"})
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-        if data.get("code") != "Ok" or not data.get("routes"):
-            return jsonify({"ok": False, "error": "No road route found."})
-        route = data["routes"][0]
-        distance_km = route["distance"] / 1000.0
+    route = fetch_osrm_route((lat1, lon1), (lat2, lon2))
+    if not route:
+        return jsonify({"ok": False, "error": "No road route found."})
 
-        # Look up rate from DB first, then fall back to hardcoded dict
-        conn = get_db()
-        fare, rate, fare_type = get_fare_for_vehicle(conn, vehicle, distance_km, passengers)
+    distance_km = min(route["distance_km"], MAX_TRIP_KM)
+
+    conn = get_db()
+    try:
+        breakdown = get_fare_breakdown(conn, vehicle, distance_km, passengers)
+    except FareNotConfigured as error:
+        return jsonify({"ok": False, "error": str(error)}), 400
+    finally:
         conn.close()
 
-        if custom_rate_val and fare_type != "fixed":
-            try:
-                crate = float(custom_rate_val)
-                if crate > 0:
-                    rate = crate
-                    fare = round(distance_km * rate * passengers, 2)
-            except ValueError:
-                pass
-
-        return jsonify({
-            "ok": True,
-            "distance_km": round(distance_km, 2),
-            "duration_minutes": round(route["duration"] / 60.0, 1),
-            "geometry": route["geometry"],
-            "rate_per_km": rate,
-            "fare_type": fare_type,
-            "vehicle": vehicle,
-            "passengers": passengers,
-            "fare_per_passenger": round(fare / max(1, passengers), 2) if fare_type != "fixed" else fare,
-            "total_fare": fare
-        })
-    except Exception as e:
-        return jsonify({"ok": False, "error": f"Route calculation failed: {e}"})
+    return jsonify({
+        "ok": True,
+        "distance_km": round(distance_km, 2),
+        "duration_minutes": round(route["duration_minutes"], 1),
+        "geometry": route["geometry"],
+        "vehicle": vehicle,
+        "passengers": passengers,
+        "fare": breakdown,
+        "fare_per_passenger": breakdown["fare_per_passenger"],
+        "total_fare": breakdown["total_fare"],
+    })
 
 
 @app.route("/api/calculate-fare")
 def api_calculate_fare():
-    """Server-side fare calculation used by the reservation form."""
+    """Fare estimate for a distance the form already has."""
+    vehicle = request.args.get("vehicle", "").strip()
+    if not vehicle:
+        return jsonify({"ok": False, "error": "Vehicle required."})
     try:
-        vehicle = request.args.get("vehicle", "").strip()
         distance_km = float(request.args.get("distance", 0))
         passengers = max(1, int(request.args.get("passengers", 1)))
-        if not vehicle:
-            return jsonify({"ok": False, "error": "Vehicle required."})
-        conn = get_db()
-        fare, rate, fare_type = get_fare_for_vehicle(conn, vehicle, distance_km, passengers)
-        vt = conn.execute(
-            "SELECT max_passengers FROM vehicle_types WHERE type_name=?", (vehicle,)
-        ).fetchone()
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "error": "Invalid distance or passenger count."})
+
+    conn = get_db()
+    try:
+        breakdown = get_fare_breakdown(conn, vehicle, distance_km, passengers)
+    except FareNotConfigured as error:
+        return jsonify({"ok": False, "error": str(error)}), 400
+    finally:
         conn.close()
-        max_pass = vt["max_passengers"] if vt else VEHICLE_LIMITS.get(vehicle, 45)
-        return jsonify({
-            "ok": True,
-            "fare": fare,
-            "rate_per_km": rate,
-            "fare_type": fare_type,
-            "max_passengers": max_pass
-        })
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
+
+    return jsonify({
+        "ok": True,
+        "fare": breakdown["total_fare"],
+        "rate_per_km": breakdown["rate_per_km"],
+        "breakdown": breakdown,
+        "max_passengers": breakdown["max_passengers"],
+    })
 
 
 @app.route("/reservation", methods=["GET", "POST"])
@@ -1221,13 +1487,15 @@ def reservation():
             destination = request.form["destination"].strip()
             travel_date = request.form["travel_date"]
             travel_time = request.form["travel_time"]
-            vehicle = request.form["vehicle"]
+            vehicle = request.form["vehicle"].strip()
             passengers = int(request.form["passengers"])
 
-            calc_mode = request.form.get("calc_mode", "auto").strip()
-            custom_dist_val = request.form.get("custom_distance", "").strip()
-            distance_value = custom_dist_val if calc_mode == "custom" and custom_dist_val else request.form.get("distance", "").strip()
-            distance = float(distance_value) if distance_value else 0.0
+            submitted_distance = request.form.get("distance", "").strip()
+            pickup_coord = read_coordinate(
+                request.form.get("pickup_lat"), request.form.get("pickup_lon"))
+            destination_coord = read_coordinate(
+                request.form.get("destination_lat"),
+                request.form.get("destination_lon"))
 
         except (KeyError, ValueError):
             flash("Please complete all reservation fields correctly.", "error")
@@ -1247,19 +1515,22 @@ def reservation():
             flash("Contact number is required.", "error")
             return redirect(url_for("reservation"))
 
-        # Validate vehicle against DB (and fall back to hardcoded for legacy types)
         conn = get_db()
-        vt_row = conn.execute(
-            "SELECT * FROM vehicle_types WHERE type_name=? AND is_available=1",
-            (vehicle,)
-        ).fetchone()
+        vt_row = get_vehicle_type(conn, vehicle)
         conn.close()
 
-        if not vt_row and vehicle not in VEHICLE_RATES:
+        if not vt_row or not vt_row["is_available"]:
             flash("Invalid or unavailable vehicle selected.", "error")
             return redirect(url_for("reservation"))
 
-        max_passengers_allowed = vt_row["max_passengers"] if vt_row else VEHICLE_LIMITS.get(vehicle, 45)
+        if not vt_row["fare_configured"]:
+            flash(
+                f"{vehicle} cannot be booked yet: an admin has to set its fare first.",
+                "error"
+            )
+            return redirect(url_for("reservation"))
+
+        max_passengers_allowed = int(vt_row["max_passengers"] or 1)
 
         if not starting_location or not destination:
             flash("Please complete the location fields.", "error")
@@ -1268,16 +1539,18 @@ def reservation():
         if not origin:
             origin = starting_location
 
-        if distance <= 0:
-            calculated_distance = calculate_distance_km(starting_location, destination)
-            if calculated_distance is None or calculated_distance <= 0:
-                if origin and origin != starting_location:
-                    calculated_distance = calculate_distance_km(starting_location, origin)
-            if calculated_distance is not None and calculated_distance > 0:
-                distance = round(calculated_distance, 1)
+        # The browser's figure is only a hint; the server measures the trip itself.
+        distance = resolve_trip_distance(
+            submitted_distance, pickup_coord, destination_coord,
+            starting_location, origin
+        )
 
-        if distance <= 0 and (not vt_row or vt_row["fare_type"] != "fixed"):
-            flash("Distance could not be calculated. Please select or calculate distance.", "error")
+        if distance <= 0:
+            flash(
+                "Distance could not be calculated. Please choose the pickup "
+                "and destination on the map.",
+                "error"
+            )
             return redirect(url_for("reservation"))
 
         if passengers < 1:
@@ -1288,24 +1561,13 @@ def reservation():
             flash(f"{vehicle} can only accommodate {max_passengers_allowed} passenger(s) per booking.", "error")
             return redirect(url_for("reservation"))
 
-        # Calculate fare from DB
+        # The fare is computed here, from the database, and never taken from the form.
         conn = get_db()
         try:
             conn.execute("BEGIN IMMEDIATE")
 
-            fare, rate_per_km, fare_type = get_fare_for_vehicle(conn, vehicle, distance, passengers)
-
-            # Allow custom rate in custom mode for distance-based vehicles
-            if calc_mode == "custom" and fare_type != "fixed":
-                custom_rate_val = request.form.get("custom_rate", "").strip()
-                if custom_rate_val:
-                    try:
-                        user_rate = float(custom_rate_val)
-                        if user_rate > 0:
-                            rate_per_km = user_rate
-                            fare = round(distance * rate_per_km * passengers, 2)
-                    except ValueError:
-                        pass
+            breakdown = get_fare_breakdown(conn, vehicle, distance, passengers)
+            fare = breakdown["total_fare"]
 
             booking_reference = generate_booking_reference(conn)
             reservation_id = get_next_reservation_id(conn)
@@ -1359,33 +1621,22 @@ def reservation():
         )
         return redirect(url_for("dashboard"))
 
-    # GET — fetch vehicle types from DB
+    # GET — the vehicle picker is built entirely from configured, available types
     conn = get_db()
-    db_vehicle_types = get_available_vehicle_types(conn)
+    db_vehicle_types = [
+        vt for vt in get_available_vehicle_types(conn) if vt["bookable"]
+    ]
     conn.close()
-
-    # Build a rate dict for JS compatibility (includes legacy types)
-    combined_rates = dict(VEHICLE_RATES)
-    combined_limits = dict(VEHICLE_LIMITS)
-    combined_location_types = dict(VEHICLE_LOCATION_TYPES)
-    for vt in db_vehicle_types:
-        if vt["fare_type"] == "fixed":
-            combined_rates[vt["type_name"]] = vt["fixed_fare"]
-        else:
-            combined_rates[vt["type_name"]] = vt["rate_per_km"]
-        combined_limits[vt["type_name"]] = vt["max_passengers"]
-        combined_location_types[vt["type_name"]] = "land"
 
     return render_template(
         "reservation.html",
-        vehicle_rates=combined_rates,
-        vehicle_limits=combined_limits,
-        vehicle_capacity=combined_limits,
         db_vehicle_types=db_vehicle_types,
         land_locations=LAND_LOCATIONS,
         airport_locations=AIRPORT_LOCATIONS,
         port_locations=PORT_LOCATIONS,
-        vehicle_location_types=combined_location_types,
+        vehicle_location_types={
+            vt["type_name"]: vt["location_type"] for vt in db_vehicle_types
+        },
         location_coordinates=LOCATION_COORDINATES,
         barangays_by_city=BARANGAYS_BY_CITY,
         terminals_by_city=TERMINALS_BY_CITY
@@ -1593,9 +1844,14 @@ def edit_reservation(reservation_id):
             destination = request.form["destination"].strip()
             travel_date = request.form["travel_date"]
             travel_time = request.form["travel_time"]
-            vehicle = request.form["vehicle"]
+            vehicle = request.form["vehicle"].strip()
             passengers = int(request.form["passengers"])
-            distance = float(request.form["distance"])
+            submitted_distance = request.form.get("distance", "").strip()
+            pickup_coord = read_coordinate(
+                request.form.get("pickup_lat"), request.form.get("pickup_lon"))
+            destination_coord = read_coordinate(
+                request.form.get("destination_lat"),
+                request.form.get("destination_lon"))
         except (KeyError, ValueError):
             flash("Please complete all reservation fields correctly.", "error")
             return redirect(url_for("edit_reservation", reservation_id=reservation_id))
@@ -1606,30 +1862,48 @@ def edit_reservation(reservation_id):
         if not contact or not starting_location or not origin or not destination:
             flash("Please complete all required fields.", "error")
             return redirect(url_for("edit_reservation", reservation_id=reservation_id))
-        if vehicle not in VEHICLE_RATES:
-            flash("Invalid vehicle selected.", "error")
+        conn = get_db()
+        vt_row = get_vehicle_type(conn, vehicle)
+
+        if not vt_row or not vt_row["is_available"]:
+            conn.close()
+            flash("Invalid or unavailable vehicle selected.", "error")
             return redirect(url_for("edit_reservation", reservation_id=reservation_id))
-        if passengers < 1 or passengers > VEHICLE_LIMITS[vehicle]:
-            flash(f"{vehicle} can only accommodate {VEHICLE_LIMITS[vehicle]} passenger(s) per booking.", "error")
+
+        if not vt_row["fare_configured"]:
+            conn.close()
+            flash(
+                f"{vehicle} cannot be booked yet: an admin has to set its fare first.",
+                "error"
+            )
             return redirect(url_for("edit_reservation", reservation_id=reservation_id))
-        calculated_distance = calculate_distance_km(
-            starting_location,
-            destination
-        )
-        if calculated_distance is None or calculated_distance <= 0:
-            if VEHICLE_LOCATION_TYPES.get(vehicle) == "land" and origin:
-                calculated_distance = calculate_distance_km(
-                    starting_location,
-                    origin
-                )
-        if calculated_distance is not None and calculated_distance > 0:
-            distance = round(calculated_distance, 1)
+
+        max_passengers_allowed = int(vt_row["max_passengers"] or 1)
+
+        if passengers < 1 or passengers > max_passengers_allowed:
+            conn.close()
+            flash(f"{vehicle} can only accommodate {max_passengers_allowed} passenger(s) per booking.", "error")
+            return redirect(url_for("edit_reservation", reservation_id=reservation_id))
+
+        # Re-measure the trip only when the customer actually moved it; otherwise
+        # keep the distance they were originally quoted.
+        if (starting_location == reservation_row["starting_location"]
+                and origin == reservation_row["origin"]
+                and destination == reservation_row["destination"]):
+            distance = float(reservation_row["distance"] or 0)
         else:
+            distance = resolve_trip_distance(
+                submitted_distance, pickup_coord, destination_coord,
+                starting_location, origin
+            )
+
+        if distance <= 0:
+            conn.close()
             flash("Distance could not be calculated for the selected locations.", "error")
             return redirect(url_for("edit_reservation", reservation_id=reservation_id))
 
-        fare = distance * VEHICLE_RATES[vehicle] * passengers
-        conn = get_db()
+        fare = get_fare_breakdown(conn, vehicle, distance, passengers)["total_fare"]
+
         try:
             conn.execute("BEGIN IMMEDIATE")
 
@@ -1684,17 +1958,35 @@ def edit_reservation(reservation_id):
         flash("Reservation updated successfully. New seats and tickets were assigned.", "success")
         return redirect(url_for("dashboard"))
 
+    conn = get_db()
+    bookable_types = [
+        vt for vt in get_available_vehicle_types(conn) if vt["bookable"]
+    ]
+    conn.close()
+
+    # A booking whose type has since been disabled or un-configured must stay
+    # editable, so keep that row in the list.
+    if all(vt["type_name"] != reservation_row["vehicle"] for vt in bookable_types):
+        conn = get_db()
+        current = next(
+            (vt for vt in get_vehicle_type_settings(conn)
+             if vt["type_name"] == reservation_row["vehicle"]), None
+        )
+        conn.close()
+        if current:
+            bookable_types.append(current)
+
     return render_template(
         "edit_reservation.html",
         reservation=reservation_row,
         passenger_names=saved_names,
-        vehicle_rates=VEHICLE_RATES,
-        vehicle_limits=VEHICLE_LIMITS,
-        vehicle_capacity=VEHICLE_CAPACITY,
+        db_vehicle_types=bookable_types,
         land_locations=LAND_LOCATIONS,
         airport_locations=AIRPORT_LOCATIONS,
         port_locations=PORT_LOCATIONS,
-        vehicle_location_types=VEHICLE_LOCATION_TYPES,
+        vehicle_location_types={
+            vt["type_name"]: vt["location_type"] for vt in bookable_types
+        },
         location_coordinates=LOCATION_COORDINATES,
         barangays_by_city=BARANGAYS_BY_CITY,
         terminals_by_city=TERMINALS_BY_CITY
@@ -1895,6 +2187,7 @@ def view_receipt(ticket_number):
         SELECT
             t.*,
             r.distance AS distance,
+            r.fare AS reservation_fare,
             u.full_name AS account_name,
             u.username
         FROM tickets t
@@ -2057,6 +2350,69 @@ def logout():
 # ADMIN — VEHICLE TYPE MANAGEMENT
 # ═══════════════════════════════════════════════════════════════════════
 
+FARE_AMOUNT_FIELDS = (
+    "base_fare", "included_distance", "rate_per_km", "min_fare", "extra_charges"
+)
+
+FARE_FIELD_NAMES = {
+    "base_fare": "Base fare",
+    "included_distance": "Included distance",
+    "rate_per_km": "Rate per kilometer",
+    "min_fare": "Minimum fare",
+    "extra_charges": "Additional charges",
+}
+
+
+def read_fare_form(form):
+    """
+    Read and validate the pricing fields of the vehicle-type form.
+
+    Every fare column is stored as a non-negative number, and a type only counts
+    as configured once the admin has actually set something to charge, so an
+    unpriced type can never quietly book at ₱0.
+    """
+    values = {}
+    for name in FARE_AMOUNT_FIELDS:
+        raw = str(form.get(name, "") or "").strip()
+        try:
+            amount = float(raw) if raw else 0.0
+        except ValueError:
+            raise ValueError(f"{FARE_FIELD_NAMES[name]} must be a number.")
+        if amount < 0:
+            raise ValueError(f"{FARE_FIELD_NAMES[name]} cannot be negative.")
+        values[name] = round(amount, 2)
+
+    charge_basis = form.get("charge_basis", "per_booking")
+    if charge_basis not in CHARGE_BASES:
+        raise ValueError("Choose how the fare is charged: per passenger or per booking.")
+
+    location_type = form.get("location_type", "land")
+    if location_type not in LOCATION_TYPES:
+        raise ValueError("Location type must be land, air or sea.")
+
+    try:
+        max_passengers = int(form.get("max_passengers", 0))
+    except ValueError:
+        raise ValueError("Maximum passengers must be a whole number.")
+    if not 1 <= max_passengers <= 500:
+        raise ValueError("Maximum passengers must be between 1 and 500.")
+
+    if not any(values[name] for name in
+               ("base_fare", "rate_per_km", "min_fare", "extra_charges")):
+        raise ValueError(
+            "Set at least one charge — a base fare, a per-kilometre rate, a "
+            "minimum fare or additional fees — before saving this vehicle type."
+        )
+
+    values.update(
+        charge_basis=charge_basis,
+        location_type=location_type,
+        max_passengers=max_passengers,
+        extra_charges_label=str(form.get("extra_charges_label", "")).strip()[:60],
+    )
+    return values
+
+
 @app.route("/admin/vehicle-types")
 def admin_vehicle_types():
     if "user_id" not in session or session.get("username") != "admin":
@@ -2066,6 +2422,63 @@ def admin_vehicle_types():
     types = get_available_vehicle_types(conn)
     conn.close()
     return render_template("admin_vehicle_types.html", vehicle_type_stats=types)
+
+
+@app.route("/admin/vehicle-types/new", methods=["GET", "POST"])
+def admin_add_vehicle_type():
+    if "user_id" not in session or session.get("username") != "admin":
+        flash("Admin access only.", "error")
+        return redirect(url_for("login"))
+
+    form_values = request.form if request.method == "POST" else None
+
+    if request.method == "POST":
+        type_name = (form_values.get("type_name") or "").strip()
+        if not type_name:
+            flash("Vehicle type name is required.", "error")
+            return render_template(
+                "admin_vehicle_type_form.html", vt=None, form_values=form_values,
+                mode="add"
+            )
+        try:
+            values = read_fare_form(form_values)
+        except ValueError as error:
+            flash(str(error), "error")
+            return render_template(
+                "admin_vehicle_type_form.html", vt=None, form_values=form_values,
+                mode="add"
+            )
+
+        conn = get_db()
+        try:
+            conn.execute(
+                """
+                INSERT INTO vehicle_types
+                (type_name, base_fare, included_distance, rate_per_km, min_fare,
+                 extra_charges, extra_charges_label, charge_basis, max_passengers,
+                 location_type, fare_configured, is_available)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+                """,
+                (type_name, values["base_fare"], values["included_distance"],
+                 values["rate_per_km"], values["min_fare"], values["extra_charges"],
+                 values["extra_charges_label"], values["charge_basis"],
+                 values["max_passengers"], values["location_type"],
+                 1 if form_values.get("is_available") else 0)
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            conn.close()
+            flash(f"A vehicle type named '{type_name}' already exists.", "error")
+            return render_template(
+                "admin_vehicle_type_form.html", vt=None, form_values=form_values,
+                mode="add"
+            )
+        conn.close()
+        flash(f"{type_name} added and priced. It is now bookable.", "success")
+        return redirect(url_for("admin_vehicle_types"))
+
+    return render_template("admin_vehicle_type_form.html", vt=None,
+                           form_values=None, mode="add")
 
 
 @app.route("/admin/vehicle-types/edit/<int:type_id>", methods=["GET", "POST"])
@@ -2080,28 +2493,37 @@ def admin_edit_vehicle_type(type_id):
         abort(404)
     if request.method == "POST":
         try:
-            fare_type = request.form.get("fare_type", "distance")
-            rate_per_km = float(request.form.get("rate_per_km", 0))
-            fixed_fare = float(request.form.get("fixed_fare", 0))
-            max_passengers = int(request.form.get("max_passengers", 45))
+            values = read_fare_form(request.form)
             conn.execute(
                 """
                 UPDATE vehicle_types
-                SET fare_type=?, rate_per_km=?, fixed_fare=?, max_passengers=?
+                SET base_fare=?, included_distance=?, rate_per_km=?, min_fare=?,
+                    extra_charges=?, extra_charges_label=?, charge_basis=?,
+                    max_passengers=?, location_type=?, fare_configured=1
                 WHERE type_id=?
                 """,
-                (fare_type, rate_per_km, fixed_fare, max_passengers, type_id)
+                (values["base_fare"], values["included_distance"],
+                 values["rate_per_km"], values["min_fare"], values["extra_charges"],
+                 values["extra_charges_label"], values["charge_basis"],
+                 values["max_passengers"], values["location_type"], type_id)
             )
             conn.commit()
             conn.close()
-            flash(f"Vehicle type '{vt['type_name']}' pricing updated.", "success")
-            return redirect(url_for("admin_dashboard"))
+            flash(
+                f"Pricing for '{vt['type_name']}' updated. Existing bookings keep "
+                "the fare they were quoted.",
+                "success"
+            )
+            return redirect(url_for("admin_vehicle_types"))
         except (ValueError, sqlite3.Error) as e:
             conn.close()
             flash(f"Update failed: {e}", "error")
             return redirect(url_for("admin_edit_vehicle_type", type_id=type_id))
+    settings = get_vehicle_type_settings(conn)
     conn.close()
-    return render_template("admin_vehicle_type_form.html", vt=vt)
+    current = next(s for s in settings if s["type_id"] == type_id)
+    return render_template("admin_vehicle_type_form.html", vt=current,
+                           form_values=None, mode="edit")
 
 
 @app.route("/admin/vehicle-types/toggle/<int:type_id>", methods=["POST"])
@@ -2110,17 +2532,27 @@ def admin_toggle_vehicle_type(type_id):
         flash("Admin access only.", "error")
         return redirect(url_for("login"))
     conn = get_db()
-    vt = conn.execute("SELECT type_name, is_available FROM vehicle_types WHERE type_id=?", (type_id,)).fetchone()
+    vt = conn.execute(
+        "SELECT type_name, is_available, fare_configured FROM vehicle_types WHERE type_id=?",
+        (type_id,)
+    ).fetchone()
     if not vt:
         conn.close()
         abort(404)
+    if not vt["is_available"] and not vt["fare_configured"]:
+        conn.close()
+        flash(
+            f"Set the fare for {vt['type_name']} before making it bookable.",
+            "error"
+        )
+        return redirect(url_for("admin_edit_vehicle_type", type_id=type_id))
     new_val = 0 if vt["is_available"] else 1
     conn.execute("UPDATE vehicle_types SET is_available=? WHERE type_id=?", (new_val, type_id))
     conn.commit()
     conn.close()
     state = "enabled" if new_val else "disabled"
     flash(f"{vt['type_name']} availability {state}.", "success")
-    return redirect(url_for("admin_dashboard"))
+    return redirect(url_for("admin_vehicle_types"))
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -2249,9 +2681,12 @@ def admin_delete_vehicle(vehicle_id):
     return redirect(url_for("admin_vehicles"))
 
 
-if __name__ == "__main__":
+# Runs on import so schema migrations also apply when launched with `flask run`,
+# not only via `python app.py`.
+init_database()
 
-    init_database()
+
+if __name__ == "__main__":
 
     print("")
     print("==============================================")

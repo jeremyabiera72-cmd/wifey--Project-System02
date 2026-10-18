@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Types &amp; Fares — Admin</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{font-family:'Inter',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+        .admin-layout{display:flex;min-height:100vh}
+        .sidebar{width:230px;background:#1e293b;border-right:1px solid #334155;padding:0;flex-shrink:0;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:100}
+        .sidebar-brand{padding:22px 20px 18px;border-bottom:1px solid #334155;font-size:15px;font-weight:800;color:#60a5fa}
+        .sidebar-brand span{display:block;font-size:11px;color:#64748b;font-weight:500;margin-top:2px}
+        .sidebar-nav{padding:12px 0}
+        .nav-section{padding:10px 18px 4px;font-size:10px;font-weight:700;color:#475569;letter-spacing:1px;text-transform:uppercase}
+        .nav-link{display:flex;align-items:center;gap:9px;padding:9px 20px;color:#94a3b8;text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;border-left:3px solid transparent}
+        .nav-link:hover,.nav-link.active{color:#60a5fa;background:#0f172a40;border-left-color:#3b82f6}
+        .nav-link.active{font-weight:600}
+        .main-content{margin-left:230px;flex:1;padding:28px 30px}
+        .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+        .topbar h1{font-size:20px;font-weight:700;color:#f1f5f9}
+        .flash-area{margin-bottom:18px}
+        .flash-msg{padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;margin-bottom:8px}
+        .flash-msg.success{background:#064e3b30;border:1px solid #059669;color:#34d399}
+        .flash-msg.error{background:#7f1d1d30;border:1px solid #dc2626;color:#f87171}
+        .section-card{background:#1e293b;border:1px solid #334155;border-radius:14px;margin-bottom:24px;overflow:hidden}
+        .section-header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #334155;background:#16213e}
+        .section-header h2{font-size:15px;font-weight:700;color:#f1f5f9}
+        .table-wrap{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th{background:#0f172a;padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #334155}
+        td{padding:11px 14px;border-bottom:1px solid #1e293b40;color:#cbd5e1;vertical-align:middle}
+        tr:last-child td{border-bottom:0}
+        tr:hover td{background:#ffffff06}
+        .type-name{font-size:14px;font-weight:700;color:#f1f5f9}
+        .price-cell{font-size:12px;color:#94a3b8;line-height:1.5}
+        .price-missing{color:#f87171;font-weight:700}
+        .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase}
+        .badge.on{background:#064e3b30;color:#34d399;border:1px solid #059669}
+        .badge.off{background:#27272a;color:#71717a;border:1px solid #52525b}
+        .badge.pending{background:#78350f30;color:#fbbf24;border:1px solid #d97706}
+        .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:7px;font-size:12px;font-weight:600;border:0;cursor:pointer;text-decoration:none;transition:all .15s;white-space:nowrap}
+        .btn-ghost{background:#334155;color:#94a3b8}.btn-ghost:hover{background:#475569;color:#e2e8f0}
+        .btn-toggle-on{background:#064e3b;color:#34d399}.btn-toggle-on:hover{background:#065f46}
+        .btn-toggle-off{background:#7f1d1d;color:#fca5a5}.btn-toggle-off:hover{background:#991b1b}
+        .add-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;transition:.15s}
+        .add-btn:hover{background:#1d4ed8}
+        .formula-note{padding:16px 24px;font-size:12px;color:#64748b;line-height:1.6}
+        .formula-note code{background:#0f172a;border:1px solid #334155;border-radius:5px;padding:2px 6px;color:#94a3b8}
+    </style>
+</head>
+<body>
+<div class="admin-layout">
+    <aside class="sidebar">
+        <div class="sidebar-brand">🚌 TRS Admin<span>Travel Reservation System</span></div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Overview</div>
+            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">📊 Dashboard</a>
+            <div class="nav-section">Vehicles</div>
+            <a class="nav-link active" href="{{ url_for('admin_vehicle_types') }}">⚙️ Vehicle Types &amp; Fares</a>
+            <a class="nav-link" href="{{ url_for('admin_vehicles') }}">🚐 Vehicle Registry</a>
+            <div class="nav-section">Account</div>
+            <a class="nav-link" href="{{ url_for('logout') }}" style="color:#f87171">🚪 Logout</a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="topbar">
+            <div>
+                <h1>⚙️ Vehicle Types &amp; Fares</h1>
+                <p style="font-size:12px;color:#64748b;margin-top:3px">Every type is priced by the same distance engine — add a type here and it needs no code change.</p>
+            </div>
+            <a href="{{ url_for('admin_add_vehicle_type') }}" class="add-btn">+ Add Vehicle Type</a>
+        </div>
+
+        <div class="flash-area">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <div class="flash-msg {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endwith %}
+        </div>
+
+        <div class="section-card">
+            <div class="section-header">
+                <h2>💰 Fare Configuration</h2>
+                <span style="font-size:12px;color:#64748b">{{ vehicle_type_stats|length }} type(s)</span>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Vehicle Type</th><th>Pricing Rules</th><th>Charged</th>
+                            <th>Max Pax</th><th>Locations</th><th>Fleet</th>
+                            <th>Booking Status</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for vt in vehicle_type_stats %}
+                        <tr>
+                            <td><span class="type-name">{{ vt.type_name }}</span></td>
+                            <td class="price-cell">
+                                {% if vt.fare_configured %}
+                                    {{ vt.price_label }}
+                                {% else %}
+                                    <span class="price-missing">Fare not configured</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ 'Per passenger' if vt.charge_basis == 'per_passenger' else 'Per booking' }}</td>
+                            <td>{{ vt.max_passengers }}</td>
+                            <td style="text-transform:capitalize">{{ vt.location_type }}</td>
+                            <td>{{ vt.available_vehicles }} free / {{ vt.total_vehicles }}</td>
+                            <td>
+                                {% if not vt.fare_configured %}
+                                    <span class="badge pending">Needs pricing</span>
+                                {% elif vt.bookable %}
+                                    <span class="badge on">Bookable</span>
+                                {% else %}
+                                    <span class="badge off">Disabled</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                                    <a class="btn btn-ghost" href="{{ url_for('admin_edit_vehicle_type', type_id=vt.type_id) }}">✏️ Edit Fare</a>
+                                    <form method="POST" action="{{ url_for('admin_toggle_vehicle_type', type_id=vt.type_id) }}" style="display:inline">
+                                        <button type="submit" class="btn {% if vt.is_available %}btn-toggle-on{% else %}btn-toggle-off{% endif %}">
+                                            {% if vt.is_available %}● On{% else %}○ Off{% endif %}
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="8" style="color:#64748b">No vehicle types yet. Add one to start pricing.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="formula-note">
+                Fare formula used for every type:<br>
+                <code>trip fare = max(minimum fare, base fare + max(0, distance − included distance) × rate per km)</code><br>
+                <code>total = trip fare × passengers</code> (per passenger) or <code>total = trip fare</code> (per booking), plus any additional charges.
+                Distance comes from the map route, and the fare is always recalculated on the server before it is saved.
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

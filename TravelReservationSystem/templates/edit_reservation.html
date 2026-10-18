@@ -127,22 +127,6 @@
             <!-- TRAVEL INFORMATION -->
             <h3>Travel Information</h3>
 
-            <!-- CALCULATION MODE CHOICE -->
-            <div class="calc-mode" style="margin-bottom:16px; display:flex; gap:8px;">
-                <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; background:#f8fafc;">
-                    <input type="radio" name="calc_mode" value="auto" checked onchange="toggleCalcMode()"> Auto (calculate route)
-                </label>
-                <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer; padding:8px 14px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; background:#f8fafc;">
-                    <input type="radio" name="calc_mode" value="custom" onchange="toggleCalcMode()"> Custom / Advance
-                </label>
-            </div>
-
-            <!-- CUSTOM RATE INPUT -->
-            <div id="customRateContainer" style="display:none; margin-bottom:12px;">
-                <label for="custom_rate">Custom Rate per km (₱)</label>
-                <input type="number" name="custom_rate" id="custom_rate" min="0" step="0.01" placeholder="Enter custom rate" oninput="updateFare()">
-            </div>
-
             <!-- VEHICLE -->
             <label for="vehicle">Vehicle</label>
             <select name="vehicle"
@@ -155,11 +139,18 @@
                         updateFare();
                     ">
                 <option value="">Select Vehicle</option>
-                {% for vehicle, rate in vehicle_rates.items() %}
-                    <option value="{{ vehicle }}"
-                            data-rate="{{ rate }}"
-                            {% if vehicle == reservation['vehicle'] %}selected{% endif %}>
-                        {{ vehicle }} - ₱{{ rate }}/km
+                {% for vt in db_vehicle_types %}
+                    <option value="{{ vt.type_name }}"
+                            data-base-fare="{{ vt.base_fare }}"
+                            data-included-distance="{{ vt.included_distance }}"
+                            data-rate-per-km="{{ vt.rate_per_km }}"
+                            data-min-fare="{{ vt.min_fare }}"
+                            data-extra-charges="{{ vt.extra_charges }}"
+                            data-extra-label="{{ vt.extra_charges_label or 'Additional fees' }}"
+                            data-charge-basis="{{ vt.charge_basis }}"
+                            data-max-passengers="{{ vt.max_passengers }}"
+                            {% if vt.type_name == reservation['vehicle'] %}selected{% endif %}>
+                        {{ vt.type_name }} — {{ vt.price_label }}
                     </option>
                 {% endfor %}
             </select>
@@ -244,7 +235,7 @@
                    name="distance"
                    id="distance"
                    min="0.1"
-                   step="0.1"
+                   step="0.01"
                    value="{{ reservation['distance'] }}"
                    placeholder="Automatic"
                    readonly
@@ -255,10 +246,21 @@
                 Distance is calculated automatically from Starting Point to Destination.
             </p>
 
+            <!-- Route endpoints, so the server can verify any changed distance -->
+            <input type="hidden" name="pickup_lat" id="pickup_lat" value="">
+            <input type="hidden" name="pickup_lon" id="pickup_lon" value="">
+            <input type="hidden" name="destination_lat" id="destination_lat" value="">
+            <input type="hidden" name="destination_lon" id="destination_lon" value="">
+
             <!-- FARE -->
             <div class="fare-box">
                 Estimated Fare:
                 <strong id="fare">₱{{ '%.2f'|format(reservation['fare']|float) }}</strong>
+                <div id="fare-breakdown" class="fare-breakdown"></div>
+                <p class="fare-estimate-note">
+                    Changing the pickup or destination re-measures the trip and
+                    re-prices it with the rates set by the admin.
+                </p>
             </div>
 
             <!-- AUTOMATIC SEAT ASSIGNMENT -->
@@ -341,38 +343,16 @@ function updateLocationChoices() {
     }
 }
 
-const vehicleInfo = {
-    "Bus": {
-        "description": "Bus seat reservation.",
-        "capacity": "Capacity: Up to 50 passengers.",
-        "bookingType": "Public transport. You pay per seat."
-    },
-    "Van": {
-        "description": "Van seat reservation.",
-        "capacity": "Capacity: Up to 14 passengers.",
-        "bookingType": "Shared van. You pay per seat."
-    },
-    "Taxi": {
-        "description": "Taxi ride reservation.",
-        "capacity": "Capacity: Up to 4 passengers.",
-        "bookingType": "Private vehicle. Rate applies per trip."
-    },
-    "Motorcycle": {
-        "description": "Motorcycle ride reservation.",
-        "capacity": "Capacity: 1 passenger only.",
-        "bookingType": "Single passenger only."
-    },
-    "Airplane": {
-        "description": "Airplane ticket reservation.",
-        "capacity": "Capacity: Up to 180 passengers.",
-        "bookingType": "Commercial flight. You pay per seat."
-    },
-    "Ferry/Barko": {
-        "description": "Ferry/Barko ticket reservation.",
-        "capacity": "Capacity: Up to 150 passengers.",
-        "bookingType": "Passenger ferry. You pay per ticket."
-    }
-};
+/* Vehicle copy comes from the database, never from a list kept in this page. */
+const vehicleInfo = {};
+
+{{ db_vehicle_types | tojson }}.forEach(function (vt) {
+    vehicleInfo[vt.type_name] = {
+        description: vt.type_name + " — " + vt.price_label + ".",
+        capacity: "Capacity: Up to " + vt.max_passengers + " passenger(s).",
+        bookingType: "Booking type: " + vt.booking_type + "."
+    };
+});
 
 function updateVehicleInfo() {
     const vehicle = document.getElementById("vehicle")?.value;
@@ -463,85 +443,40 @@ function updateAutomaticDistance() {
     const distanceInput = document.getElementById("distance");
     if (!distanceInput) return;
 
-    const distance = calculateDistanceKm(startingLocation, destination);
-    if (distance !== null && distance > 0) {
-        distanceInput.value = distance.toFixed(1);
-    }
-    updateFare();
-}
+    /* A distance measured from the map route outranks the straight-line figure
+       these preset coordinates can only offer. */
+    const routeMeasured =
+        document.getElementById("pickup_lat")?.value &&
+        document.getElementById("destination_lat")?.value &&
+        parseFloat(distanceInput.value) > 0;
 
-function updateFare() {
-    const vehicle = document.getElementById("vehicle");
-    const distance = document.getElementById("distance");
-    const passengers = document.getElementById("passengers");
-    const fare = document.getElementById("fare");
-    if (!vehicle || !distance || !passengers || !fare) return;
-
-    const selected = vehicle.options[vehicle.selectedIndex];
-    if (!selected) {
-        fare.textContent = "₱0.00";
+    if (routeMeasured) {
+        updateFare();
         return;
     }
 
-    let rate = parseFloat(selected.getAttribute("data-rate"));
-    const calcMode = document.querySelector('input[name="calc_mode"]:checked');
-    if (calcMode && calcMode.value === 'custom') {
-        const customRateInput = document.getElementById('custom_rate');
-        if (customRateInput && parseFloat(customRateInput.value) > 0) {
-            rate = parseFloat(customRateInput.value);
-        }
-    }
-
-    const km = parseFloat(distance.value);
-    const numberOfPassengers = parseInt(passengers.value);
-
-    if (rate > 0 && km > 0 && numberOfPassengers > 0) {
-        const farePerPassenger = rate * km;
-        const totalFare = farePerPassenger * numberOfPassengers;
-        fare.textContent = "₱" + totalFare.toFixed(2);
-    } else {
-        fare.textContent = "₱0.00";
-    }
-}
-
-function toggleCalcMode() {
-    const mode = document.querySelector('input[name="calc_mode"]:checked');
-    const customContainer = document.getElementById('customRateContainer');
-    const distanceField = document.getElementById('distance');
-    const vehicleSelect = document.getElementById('vehicle');
-
-    if (mode && mode.value === 'custom') {
-        customContainer.style.display = 'block';
-        if (distanceField) {
-            distanceField.removeAttribute('readonly');
-            distanceField.placeholder = 'Enter distance in km';
-        }
-        if (vehicleSelect) {
-            for (const opt of vehicleSelect.options) {
-                if (opt.value) {
-                    if (!opt.getAttribute('data-full-text')) {
-                        opt.setAttribute('data-full-text', opt.textContent.trim());
-                    }
-                    opt.textContent = opt.value;
-                }
-            }
-        }
-    } else {
-        customContainer.style.display = 'none';
-        if (distanceField) {
-            distanceField.setAttribute('readonly', 'readonly');
-            distanceField.placeholder = 'Automatic';
-        }
-        if (vehicleSelect) {
-            for (const opt of vehicleSelect.options) {
-                const fullText = opt.getAttribute('data-full-text');
-                if (fullText) {
-                    opt.textContent = fullText;
-                }
-            }
-        }
+    const distance = calculateDistanceKm(startingLocation, destination);
+    if (distance !== null && distance > 0) {
+        distanceInput.value = distance.toFixed(2);
     }
     updateFare();
+}
+
+// Editing an address makes the pins, and therefore the measured route, stale.
+function clearMeasuredRoute() {
+    ['pickup_lat', 'pickup_lon', 'destination_lat', 'destination_lon', 'distance']
+        .forEach(id => {
+            const field = document.getElementById(id);
+            if (field) field.value = '';
+        });
+    updateFare();
+}
+
+function setCoordinate(id, value) {
+    const field = document.getElementById(id);
+    if (field) {
+        field.value = value;
+    }
 }
 
 /* =====================================================
@@ -618,7 +553,10 @@ function initReservationMap() {
     document.getElementById('starting_location')?.addEventListener('input', () => {
         const originInput = document.getElementById('origin');
         if (originInput) originInput.value = document.getElementById('starting_location').value;
+        clearMeasuredRoute();
     });
+
+    document.getElementById('destination')?.addEventListener('input', clearMeasuredRoute);
 
     // Check if initial locations exist and draw them on map
     const initialStart = document.getElementById('starting_location')?.value.trim();
@@ -780,6 +718,12 @@ async function calculateRoadRoute() {
         statusMsg.style.display = 'block';
     }
 
+    // Sent along so the server can re-measure the trip it is about to re-price.
+    setCoordinate("pickup_lat", pickupCoord.lat);
+    setCoordinate("pickup_lon", pickupCoord.lon);
+    setCoordinate("destination_lat", destCoord.lat);
+    setCoordinate("destination_lon", destCoord.lon);
+
     const vehicleVal = document.getElementById('vehicle')?.value || 'Bus';
     const passengersVal = parseInt(document.getElementById('passengers')?.value) || 1;
 
@@ -814,17 +758,18 @@ async function calculateRoadRoute() {
             }
             const distInput = document.getElementById('distance');
             if (distInput) {
-                distInput.value = parseFloat(routeData.distance_km).toFixed(1);
+                // 2 decimals, the same rounding the server prices with.
+                distInput.value = parseFloat(routeData.distance_km).toFixed(2);
             }
             if (statusMsg) {
-                statusMsg.textContent = `Road route: ${parseFloat(routeData.distance_km).toFixed(1)} km (approx. ${Math.round(routeData.duration_minutes)} min drive)`;
+                statusMsg.textContent = `Road route: ${parseFloat(routeData.distance_km).toFixed(2)} km (approx. ${Math.round(routeData.duration_minutes)} min drive)`;
             }
             updateFare();
         } else {
             const distInput = document.getElementById('distance');
             const d = calculateDistanceKm(startVal, destVal);
             if (distInput && d > 0) {
-                distInput.value = d.toFixed(1);
+                distInput.value = d.toFixed(2);
             }
             updateFare();
         }
@@ -836,7 +781,6 @@ async function calculateRoadRoute() {
 }
 
 document.addEventListener("DOMContentLoaded", function() {
-    toggleCalcMode();
     generatePassengerFields();
     updateVehicleInfo();
     updateLocationChoices();
@@ -845,6 +789,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
+<script src="{{ url_for('static', filename='js/fare-calculator.js') }}"></script>
 <script src="{{ url_for('static', filename='leaflet/leaflet.js') }}"></script>
 </body>
 </html>

@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Vehicle Type Pricing — Admin</title>
+    <title>{% if mode == 'add' %}New Vehicle Type{% else %}Edit Pricing — {{ vt['type_name'] }}{% endif %} — Admin</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:'Inter',Arial,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
-        .form-wrap{width:100%;max-width:500px}
+        .form-wrap{width:100%;max-width:560px}
         .back-link{display:inline-flex;align-items:center;gap:6px;color:#64748b;text-decoration:none;font-size:13px;margin-bottom:20px;transition:.15s}
         .back-link:hover{color:#94a3b8}
         .card{background:#1e293b;border:1px solid #334155;border-radius:16px;overflow:hidden}
@@ -21,84 +21,237 @@
         label{display:block;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
         input,select{width:100%;background:#0f172a;border:1px solid #334155;border-radius:9px;color:#e2e8f0;padding:10px 14px;font-size:14px;font-family:inherit;transition:.15s;outline:none}
         input:focus,select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px #3b82f620}
+        input[readonly]{color:#64748b}
         select option{background:#0f172a}
         .field-hint{font-size:12px;color:#475569;margin-top:5px}
-        .fare-section{padding:16px;border:1px solid #334155;border-radius:10px;background:#0f172a;margin-bottom:20px}
-        .fare-section.active{border-color:#3b82f6}
-        .radio-label{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #334155;border-radius:9px;cursor:pointer;font-size:14px;margin-bottom:8px;transition:.15s}
+        .field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+        .fare-section{padding:18px;border:1px solid #334155;border-radius:10px;background:#0f172a;margin-bottom:20px}
+        .fare-section h2{font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+        .radio-label{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #334155;border-radius:9px;cursor:pointer;font-size:14px;margin-bottom:8px;transition:.15s;text-transform:none;letter-spacing:0;font-weight:500;color:#e2e8f0}
         .radio-label:hover{border-color:#3b82f6}
-        .radio-label input[type=radio]{width:auto;margin:0}
+        .radio-label input[type=radio],.radio-label input[type=checkbox]{width:auto;margin:0}
+        .check-label{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:500;text-transform:none;letter-spacing:0;color:#e2e8f0;margin-bottom:0}
+        .check-label input{width:auto;margin:0}
+        .preview{margin-top:6px;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:16px}
+        .preview h2{font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+        .preview-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px dashed #1f2c45}
+        .preview-row:last-child{border-bottom:0}
+        .preview-row span:first-child{color:#64748b}
+        .preview-note{font-size:12px;color:#475569;margin-top:10px}
         .btn-row{display:flex;gap:10px;margin-top:28px}
         .btn{padding:11px 22px;border-radius:9px;font-size:14px;font-weight:700;border:0;cursor:pointer;text-decoration:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
         .btn-primary{background:#2563eb;color:#fff}.btn-primary:hover{background:#1d4ed8}
         .btn-ghost{background:#334155;color:#94a3b8}.btn-ghost:hover{background:#475569;color:#e2e8f0}
+        .flash-msg{padding:12px 16px;border-radius:9px;font-size:13px;font-weight:500;margin-bottom:16px}
+        .flash-msg.success{background:#064e3b30;border:1px solid #059669;color:#34d399}
+        .flash-msg.error{background:#7f1d1d30;border:1px solid #dc2626;color:#f87171}
     </style>
+    <script src="{{ url_for('static', filename='js/fare-calculator.js') }}"></script>
     <script>
-        function updateFareFields() {
-            const fareType = document.querySelector('input[name="fare_type"]:checked').value;
-            document.getElementById('distance-fields').style.display = fareType === 'distance' ? 'block' : 'none';
-            document.getElementById('fixed-fields').style.display = fareType === 'fixed' ? 'block' : 'none';
+        /*
+         * Preview only. calculateFare() comes from fare-calculator.js, the same
+         * formula get_fare_breakdown() runs server-side, so what the admin sees
+         * here is what a customer will be quoted.
+         */
+        function readFormSettings() {
+            function number(id) {
+                const value = parseFloat(document.getElementById(id).value);
+                return isNaN(value) ? 0 : value;
+            }
+            const basis = document.querySelector('input[name="charge_basis"]:checked');
+            return {
+                baseFare: number("base_fare"),
+                includedDistance: number("included_distance"),
+                ratePerKm: number("rate_per_km"),
+                minFare: number("min_fare"),
+                extraCharges: number("extra_charges"),
+                extraChargesLabel: document.getElementById("extra_charges_label").value || "fees",
+                chargeBasis: basis ? basis.value : "per_booking"
+            };
         }
-        window.addEventListener('DOMContentLoaded', updateFareFields);
+
+        function updatePreview() {
+            const box = document.getElementById("preview-rows");
+            const settings = readFormSettings();
+            const perPassenger = settings.chargeBasis === "per_passenger";
+
+            box.innerHTML = [5, 50, 200].map(function(km) {
+                const total = calculateFare(settings, km, 1).total;
+                return '<div class="preview-row"><span>' + km + ' km trip</span><span>' +
+                    fareMoney(total) + (perPassenger ? " per passenger" : "") + '</span></div>';
+            }).join("");
+
+            document.getElementById("preview-note").textContent = perPassenger
+                ? "Per-passenger fare: the trip fare above is multiplied by the number of passengers, then additional charges are added."
+                : "Charter fare: the trip fare above is charged once for the whole booking, then additional charges are added.";
+        }
+
+        window.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll("input, select").forEach(function(el) {
+                el.addEventListener("input", updatePreview);
+                el.addEventListener("change", updatePreview);
+            });
+            updatePreview();
+        });
     </script>
 </head>
 <body>
+{% set fv = form_values %}
+{% macro num(name, default=0, fmt='%.2f') -%}
+    {%- if fv -%}{{ fv.get(name, '') -}}
+    {%- elif vt -%}{{ fmt | format(vt[name] | float) -}}
+    {%- else -%}{{ default -}}
+    {%- endif -%}
+{%- endmacro %}
+{% macro chosen(name, choice, default) -%}
+    {%- if (fv and fv.get(name) == choice) or (vt and vt[name] == choice)
+           or (not fv and not vt and choice == default) %}checked{% endif -%}
+{%- endmacro %}
+{% macro picked(name, choice, default) -%}
+    {%- if (fv and fv.get(name) == choice) or (vt and vt[name] == choice)
+           or (not fv and not vt and choice == default) %}selected{% endif -%}
+{%- endmacro %}
 <div class="form-wrap">
-    <a href="{{ url_for('admin_dashboard') }}" class="back-link">← Back to Dashboard</a>
+    <a href="{{ url_for('admin_vehicle_types') }}" class="back-link">← Back to Vehicle Types</a>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+            <div class="flash-msg {{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endwith %}
 
     <div class="card">
         <div class="card-header">
-            <h1>⚙️ Edit Pricing — {{ vt['type_name'] }}</h1>
-            <p>Configure the fare type, rate, and passenger capacity for this vehicle type.</p>
+            <h1>
+                {% if mode == 'add' %}➕ New Vehicle Type{% else %}⚙️ Edit Pricing — {{ vt['type_name'] }}{% endif %}
+            </h1>
+            <p>Every vehicle type is priced by the same engine: a base fare, a per-kilometre rate beyond the included distance, an optional minimum fare and optional extra charges.</p>
         </div>
         <div class="card-body">
             <form method="POST">
 
+                {% if mode == 'add' %}
                 <div class="field-group">
-                    <label>Fare Calculation Mode</label>
-                    <label class="radio-label">
-                        <input type="radio" name="fare_type" value="distance"
-                               {% if vt['fare_type'] == 'distance' %}checked{% endif %}
-                               onchange="updateFareFields()">
-                        📏 <strong>Distance-based</strong> — Rate per kilometer × passengers
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="fare_type" value="fixed"
-                               {% if vt['fare_type'] == 'fixed' %}checked{% endif %}
-                               onchange="updateFareFields()">
-                        📌 <strong>Fixed Fare</strong> — Flat rate per booking (e.g., charter)
-                    </label>
+                    <label for="type_name">Vehicle Type Name</label>
+                    <input type="text" id="type_name" name="type_name" required maxlength="50"
+                           placeholder="e.g. Airport Shuttle"
+                           value="{% if fv %}{{ fv.get('type_name', '') }}{% endif %}">
+                    <p class="field-hint">Customers see this name, and drivers of matching vehicle codes get the bookings.</p>
+                </div>
+                {% else %}
+                <div class="field-group">
+                    <label for="type_name_readonly">Vehicle Type Name</label>
+                    <input type="text" id="type_name_readonly" value="{{ vt['type_name'] }}" readonly>
+                    <p class="field-hint">Registered vehicles are matched to this name, so pricing is edited instead of renamed.</p>
+                </div>
+                {% endif %}
+
+                <div class="fare-section">
+                    <h2>Distance Pricing</h2>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label for="base_fare">Base Fare (₱)</label>
+                            <input type="number" id="base_fare" name="base_fare" step="0.01" min="0"
+                                   value="{{ num('base_fare') }}" placeholder="e.g. 1500.00">
+                            <p class="field-hint">Starting price for the trip.</p>
+                        </div>
+                        <div class="field-group">
+                            <label for="included_distance">Included Distance (km)</label>
+                            <input type="number" id="included_distance" name="included_distance" step="0.1" min="0"
+                                   value="{{ num('included_distance', fmt='%.1f') }}" placeholder="e.g. 25">
+                            <p class="field-hint">Kilometres already covered by the base fare. Use 0 to charge per km from the first metre.</p>
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label for="rate_per_km">Additional Rate (₱/km)</label>
+                            <input type="number" id="rate_per_km" name="rate_per_km" step="0.01" min="0"
+                                   value="{{ num('rate_per_km') }}" placeholder="e.g. 45.00">
+                            <p class="field-hint">Applied to every km beyond the included distance.</p>
+                        </div>
+                        <div class="field-group">
+                            <label for="min_fare">Minimum Fare (₱)</label>
+                            <input type="number" id="min_fare" name="min_fare" step="0.01" min="0"
+                                   value="{{ num('min_fare') }}" placeholder="Optional">
+                            <p class="field-hint">Floor for short trips. Leave empty for no minimum.</p>
+                        </div>
+                    </div>
+                    <p class="field-hint">
+                        Trip fare = minimum fare, or base fare + (distance − included distance) × rate — whichever is higher.
+                    </p>
                 </div>
 
-                <div id="distance-fields">
-                    <div class="field-group">
-                        <label>Rate per Kilometer (₱)</label>
-                        <input type="number" name="rate_per_km" step="0.01" min="0"
-                               value="{{ '%.2f'|format(vt['rate_per_km']|float) }}"
-                               placeholder="e.g. 2.22">
-                        <p class="field-hint">Fare = distance × rate × passengers</p>
+                <div class="fare-section">
+                    <h2>Additional Charges</h2>
+                    <div class="field-row">
+                        <div class="field-group">
+                            <label for="extra_charges">Amount (₱)</label>
+                            <input type="number" id="extra_charges" name="extra_charges" step="0.01" min="0"
+                                   value="{{ num('extra_charges') }}" placeholder="e.g. 120.00">
+                            <p class="field-hint">Waiting fees, tolls, terminal fees… added once per booking.</p>
+                        </div>
+                        <div class="field-group">
+                            <label for="extra_charges_label">Label Shown to Customers</label>
+                            <input type="text" id="extra_charges_label" name="extra_charges_label" maxlength="60"
+                                   value="{% if fv %}{{ fv.get('extra_charges_label', '') }}{% elif vt %}{{ vt['extra_charges_label'] }}{% endif %}"
+                                   placeholder="e.g. Toll &amp; waiting fees">
+                        </div>
                     </div>
                 </div>
 
-                <div id="fixed-fields" style="display:none">
+                <div class="fare-section">
+                    <h2>Who Is Charged</h2>
+                    <label class="radio-label">
+                        <input type="radio" name="charge_basis" value="per_booking"
+                               {{ chosen('charge_basis', 'per_booking', 'per_booking') }}>
+                        🚌 <strong>Once per booking</strong> — charter the whole vehicle
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="charge_basis" value="per_passenger"
+                               {{ chosen('charge_basis', 'per_passenger', 'per_booking') }}>
+                        🧍 <strong>Per passenger</strong> — each seat is ticketed
+                    </label>
+                </div>
+
+                <div class="field-row">
                     <div class="field-group">
-                        <label>Fixed Fare Amount (₱)</label>
-                        <input type="number" name="fixed_fare" step="0.01" min="0"
-                               value="{{ '%.2f'|format(vt['fixed_fare']|float) }}"
-                               placeholder="e.g. 1500.00">
-                        <p class="field-hint">One flat price charged per reservation regardless of distance.</p>
+                        <label for="max_passengers">Maximum Passengers per Booking</label>
+                        <input type="number" id="max_passengers" name="max_passengers" min="1" max="500" required
+                               value="{% if fv %}{{ fv.get('max_passengers', 1) }}{% elif vt %}{{ vt['max_passengers'] }}{% else %}1{% endif %}">
+                    </div>
+                    <div class="field-group">
+                        <label for="location_type">Location Source</label>
+                        <select id="location_type" name="location_type">
+                            <option value="land" {{ picked('location_type', 'land', 'land') }}>Land — road addresses</option>
+                            <option value="air" {{ picked('location_type', 'air', 'land') }}>Air — airports</option>
+                            <option value="sea" {{ picked('location_type', 'sea', 'land') }}>Sea — ports</option>
+                        </select>
+                        <p class="field-hint">Controls the pickup and destination lists customers choose from.</p>
                     </div>
                 </div>
 
+                {% if mode == 'add' %}
                 <div class="field-group">
-                    <label>Maximum Passengers per Booking</label>
-                    <input type="number" name="max_passengers" min="1" max="500"
-                           value="{{ vt['max_passengers'] }}" required>
+                    <label class="check-label">
+                        <input type="checkbox" name="is_available" value="1"
+                               {% if not fv or fv.get('is_available') %}checked{% endif %}>
+                        Make this type bookable right away
+                    </label>
+                    <p class="field-hint">Vehicles still have to be registered under this type before bookings can be confirmed.</p>
+                </div>
+                {% endif %}
+
+                <div class="preview">
+                    <h2>Fare Preview</h2>
+                    <div id="preview-rows"></div>
+                    <p class="preview-note" id="preview-note"></p>
                 </div>
 
                 <div class="btn-row">
-                    <button type="submit" class="btn btn-primary">💾 Save Pricing</button>
-                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-ghost">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        💾 {% if mode == 'add' %}Create Vehicle Type{% else %}Save Pricing{% endif %}
+                    </button>
+                    <a href="{{ url_for('admin_vehicle_types') }}" class="btn btn-ghost">Cancel</a>
                 </div>
             </form>
         </div>

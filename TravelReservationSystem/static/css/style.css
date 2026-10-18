@@ -259,6 +259,39 @@ select {
     margin-top: 5px;
 }
 
+.fare-breakdown {
+    margin-top: 14px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.fare-breakdown .fb-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.18);
+    color: #dbeafe;
+}
+
+.fare-breakdown .fb-row.fb-total {
+    border-bottom: 0;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    font-weight: 700;
+    color: #fff;
+}
+
+.fare-estimate-note {
+    margin-top: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 400;
+    text-align: left;
+    color: rgba(255, 255, 255, 0.65);
+}
+
 .back-link {
     text-align: center;
     margin-top: 20px;

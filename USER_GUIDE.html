@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Travel Reservation System — User Guide</title>
+<style>
+@page { margin: 16mm 15mm; }
+body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 10.5pt; color: #22283a; line-height: 1.45; }
+h1 { font-size: 22pt; color: #1b3a6b; margin: 0 0 2pt; }
+h2 { font-size: 14.5pt; color: #1b3a6b; border-bottom: 2px solid #315cf5; padding-bottom: 2pt; margin-top: 22pt; }
+h3 { font-size: 11.5pt; color: #315cf5; margin-bottom: 2pt; margin-top: 14pt; }
+h4 { font-size: 10.5pt; color: #22283a; margin-bottom: 2pt; margin-top: 10pt; }
+p { margin: 5pt 0; }
+ul, ol { margin: 4pt 0 8pt 18pt; padding: 0; }
+li { margin-bottom: 3pt; }
+code, kbd { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #f0f2f8; padding: 0 2px; }
+pre { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #f4f6fb; border: 1px solid #d7deee; padding: 7px 9px; }
+table { border-collapse: collapse; margin: 8pt 0; }
+th { font-size: 9.5pt; color: #1b3a6b; text-align: left; }
+td, th { border: 1px solid #9aa6c2; }
+td { font-size: 10pt; }
+.subtitle { font-size: 12pt; color: #55607a; margin: 0 0 2pt; }
+.meta { font-size: 9pt; color: #77819a; }
+.step { font-size: 10.5pt; color: #1b3a6b; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<h1>Travel Reservation System</h1>
+<p class="subtitle">User Guide &amp; Operating Instructions</p>
+<p class="meta">Covers the web application in <code>TravelReservationSystem/</code> &nbsp;·&nbsp; Flask + SQLite &nbsp;·&nbsp; October 2026<br>
+For the technical internals, see <code>SYSTEM_DOCS.md</code> in the project root.</p>
+
+<h2>1. What this system is</h2>
+
+<p>It is a booking and ticketing system for a small transport operator. Customers sign up,
+choose a vehicle, enter where they are being picked up and where they are going, and the
+system works out the distance and a fare estimate. When the customer confirms, the booking is
+saved with that fare, seats are assigned automatically, and a printable ticket is issued per
+passenger. Admins control the vehicle types, their pricing rules, the vehicle fleet, and every
+booking.</p>
+
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb">
+  <th width="22%">Role</th><th width="30%">Where they work</th><th>What they can do</th></tr>
+<tr>
+  <td><b>Customer</b></td>
+  <td><code>/</code> login → <code>/dashboard</code> → <code>/reservation</code></td>
+  <td>Register, book a trip, see the fare estimate, view and print tickets and receipts, edit or
+      cancel their own bookings.</td></tr>
+<tr bgcolor="#f7f9fd">
+  <td><b>Admin</b></td>
+  <td><code>/admin-login</code> → <code>/admin</code></td>
+  <td>Set and change pricing per vehicle type, add new vehicle types, enable or disable types,
+      register vehicles, see all reservations, tickets and users, delete bookings.</td></tr>
+</table>
+
+<p>The key idea: <b>no price is written into the code or the web pages</b>. Every fare comes from
+the vehicle type's row in the database, so the operator can reprice anything — or add a completely
+new vehicle type — from the admin screens without touching a line of code.</p>
+
+<h2>2. Getting started</h2>
+
+<h3>2.1 Requirements</h3>
+<ul>
+<li>Python 3.13 (a <code>.venv</code> exists in the project root; the system Python has no Flask).</li>
+<li>Two packages at minimum: <code>Flask</code> and <code>qrcode</code> (plus <code>Pillow</code> for image output).</li>
+<li>An internet connection for address search, road-routing and map tiles. The system still works
+    without it — see <b>§8 Troubleshooting</b>.</li>
+</ul>
+
+<h3>2.2 Start the server</h3>
+<pre>cd Travel-reservation-project
+python -m venv .venv
+.venv/bin/pip install -r TravelReservationSystem/requirements.txt
+
+cd TravelReservationSystem
+../.venv/bin/python app.py</pre>
+<p>Then open <b>http://127.0.0.1:5000</b> in a browser. Other devices on the same network can use
+<code>http://&lt;your-computer-ip&gt;:5000</code>, since the server listens on all interfaces.</p>
+
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="26%">Item</th><th>Value</th></tr>
+<tr><td>Customer entry point</td><td><code>http://127.0.0.1:5000/</code></td></tr>
+<tr bgcolor="#f7f9fd"><td>Admin entry point</td><td><code>http://127.0.0.1:5000/admin-login</code></td></tr>
+<tr><td>Default admin sign-in</td><td>username <code>admin</code> &nbsp;·&nbsp; password <code>admin123</code></td></tr>
+<tr bgcolor="#f7f9fd"><td>Database file</td><td><code>TravelReservationSystem/travel_reservation.db</code> — created and upgraded automatically on start-up</td></tr>
+<tr><td>First customer</td><td>Create one from <b>Register</b>; there is no seeded customer account.</td></tr>
+</table>
+
+<table border="1" cellspacing="0" cellpadding="8" width="100%">
+<tr><td bgcolor="#fff4d6"><b>Before going live:</b> the <code>admin123</code> password and the session
+secret in <code>app.py</code> are development defaults. Change both, and run behind a real WSGI
+server (<code>gunicorn app:app</code>) with HTTPS instead of <code>app.py</code>'s built-in debug server.</td></tr>
+</table>
+
+<h2>3. Customer instructions</h2>
+
+<h3>3.1 Create an account</h3>
+<ol>
+<li>Open the site and click <b>Register</b>.</li>
+<li>Fill in <b>Full Name</b>, <b>Username</b>, <b>Contact Number</b>, <b>Password</b> and
+    <b>Confirm Password</b>. The username must not already be taken and the two passwords must match.</li>
+<li>Sign in with that username and password. You land on the <b>Customer Dashboard</b>.</li>
+</ol>
+
+<h3>3.2 Book a trip</h3>
+<p>From the dashboard click <b>+ Make New Reservation</b>. The form has these fields:</p>
+
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="30%">Field</th><th>What to enter</th></tr>
+<tr><td><b>Number of Passengers</b></td><td>How many people travel. This multiplies the fare for
+    per-passenger vehicle types and limits how many you may book.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Passenger names</b></td><td>One name box appears per passenger.
+    <b>Every box must be filled</b> — the count of names must equal the passenger count, or the
+    booking is rejected.</td></tr>
+<tr><td><b>Contact Number</b></td><td>Your phone, e.g. <code>09XXXXXXXXX</code>.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Vehicle Type</b></td><td>Dropdown. Each entry shows its own price rule,
+    e.g. <i>Private Van — ₱1,500.00 base (first 25 km) · ₱45.00/km after 25 km · per booking</i>.
+    Only vehicles that are both enabled and priced appear here.</td></tr>
+<tr><td><b>Pickup / Starting Location</b></td><td>Type an address or place name and press
+    <b>🔍 Search</b>, or place a pin with <b>📍 Set Pickup</b> on the map.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Destination</b></td><td>Same — <b>🔍 Search</b> or <b>📍 Set Dest</b>.</td></tr>
+<tr><td><b>Travel Date</b> / <b>Travel Time</b></td><td>Date and time pickers.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Distance (km)</b></td><td>Normally left alone — it fills itself once the
+    route is measured. It is the kilometres the fare is calculated from.</td></tr>
+</table>
+
+<p><b>Recommended order:</b> set the passenger count, pick the vehicle, set the pickup, set the
+destination, then click <b>🗺️ Calculate Road Distance &amp; Fare</b>. The map draws the road, the
+distance box fills in, and the fare panel updates. Changing the vehicle, the passenger count or
+either location recalculates immediately.</p>
+
+<h3>3.3 Read the fare panel</h3>
+<p>Below the form a panel lists the distance, the pricing rule of the chosen vehicle, each line of
+the calculation, and the <b>Estimated Fare</b>. It is labelled as an estimate on purpose:</p>
+<pre>This is an estimate based on the route the map found.
+The confirmed fare is the one saved with your booking.</pre>
+
+<p>Worked example — <b>Private Van</b> (₱1,500 base covering 25 km, ₱45 per extra km, charged once
+per booking) for a <b>40 km</b> trip:</p>
+<pre>extra distance = 40 − 25            = 15 km
+distance charge = 15 × ₱45          = ₱675.00
+trip fare = ₱1,500 + ₱675           = ₱2,175.00
+charged once (per booking)          = ₱2,175.00</pre>
+
+<p>The same 40 km on the <b>Bus</b> (₱2.22/km, charged per passenger) with 3 passengers:</p>
+<pre>trip fare = 40 × ₱2.22              = ₱88.80
+× 3 passengers                      = ₱266.40</pre>
+
+<h3>3.4 Confirm, then collect the tickets</h3>
+<ol>
+<li>Check the vehicle, route, distance and total shown, then submit the form.</li>
+<li>You are taken to a confirmation page showing the <b>booking reference</b>
+    (<code>BKF-YYYYMMDD-NNNN</code>), the saved fare and the seats.</li>
+<li>One ticket is created <b>per passenger</b>, numbered <code>TRS-000001-01</code>,
+    <code>TRS-000001-02</code>, and so on.</li>
+<li>From the dashboard, use <b>🎫 View Ticket</b> for the printable ticket and
+    <b>🧾 Receipt</b> for the payment receipt. Each ticket carries a <b>QR code</b>; scanning it
+    opens a public verification page showing that ticket's route, date, seat and status — useful
+    for a driver or gate check.</li>
+</ol>
+
+<h3>3.5 Change or cancel a booking</h3>
+<p>On the dashboard, next to each reservation:</p>
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="20%">Button</th><th>Effect</th></tr>
+<tr><td><b>✏ Edit</b></td><td>Opens the booking pre-filled. Change passengers, vehicle, route, date
+    or time. If you change the pickup or destination, the route is re-measured and the fare is
+    recalculated; if the route stays the same, the saved distance is reused. The ticket fare shown
+    after saving is the new computed fare.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>🚫 Cancel</b></td><td>Marks the reservation and its tickets
+    <i>Cancelled</i> and <b>frees the seats</b> so other customers can take them. Not available once
+    a booking is <i>Completed</i> or already cancelled.</td></tr>
+<tr><td><b>🗑 Delete</b></td><td>Removes the booking permanently. Cancel instead if you want the
+    record kept for the operator's accounting.</td></tr>
+</table>
+<p>You can only touch bookings signed in under your own account.</p>
+
+<h2>4. Admin instructions</h2>
+
+<h3>4.1 Sign in and find your way around</h3>
+<p>Go to <code>/admin-login</code> and sign in with the admin credentials. The sidebar gives you:</p>
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="28%">Section</th><th>Purpose</th></tr>
+<tr><td>📊 Dashboard</td><td>Counters, plus the <b>Available Vehicle Types</b>, <b>Vehicle Registry</b>,
+    <b>All Reservations</b>, <b>All Passenger Tickets</b> and <b>Registered Users</b> tables on one page.</td></tr>
+<tr bgcolor="#f7f9fd"><td>⚙️ Vehicle Types</td><td>The pricing table — one row per type, with its fare rule
+    and bookable status. <b>This is where fares are set.</b></td></tr>
+<tr><td>🚐 Vehicle Registry</td><td>The physical fleet: individual vehicles, plates, capacity, driver, status.</td></tr>
+<tr bgcolor="#f7f9fd"><td>📋 All Reservations / 🎫 All Tickets</td><td>Every booking and every issued ticket,
+    with links to the ticket and receipt.</td></tr>
+<tr><td>👥 Registered Users</td><td>Customer accounts.</td></tr>
+</table>
+
+<h3>4.2 Set or change a vehicle type's pricing</h3>
+<p>On the dashboard, in <b>Available Vehicle Types</b>, click <b>✏️ Edit Pricing</b> on a type
+(or open <code>/admin/vehicle-types</code> for the full list). The form is the same for every type:</p>
+
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="32%">Field</th><th>Meaning</th></tr>
+<tr><td colspan="2" bgcolor="#eef3fb"><b>Distance Pricing</b></td></tr>
+<tr><td><b>Base Fare (₱)</b></td><td>Flat charge for the trip, before any kilometres.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Included Distance (km)</b></td><td>Kilometres covered by the base fare.
+    Beyond this, the additional rate applies. Set <code>0</code> for a pure per-kilometre fare.</td></tr>
+<tr><td><b>Additional Rate (₱/km)</b></td><td>Price per kilometre <i>beyond</i> the included distance.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Minimum Fare (₱)</b></td><td>Floor price. Use <code>0</code> for no floor.</td></tr>
+<tr><td colspan="2" bgcolor="#eef3fb"><b>Additional Charges</b></td></tr>
+<tr><td><b>Amount (₱)</b></td><td>Optional flat add-on — terminal fee, toll, surcharge.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Label Shown to Customers</b></td><td>What that add-on is called on the
+    quote and receipt, e.g. <i>Terminal fee</i>. Maximum 60 characters.</td></tr>
+<tr><td colspan="2" bgcolor="#eef3fb"><b>Who Is Charged</b></td></tr>
+<tr><td><b>Per booking</b></td><td>One price for the whole vehicle — charter style. Good for Private Van, Taxi.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Per passenger</b></td><td>The computed trip fare is multiplied by the
+    passenger count — seat-sale style. Good for Bus, Van.</td></tr>
+<tr><td colspan="2" bgcolor="#eef3fb"><b>Capacity &amp; Availability</b></td></tr>
+<tr><td><b>Maximum Passengers per Booking</b></td><td>Seat capacity, 1–500. Drives seat assignment and
+    blocks over-booking.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Location Source</b></td><td><i>Land — road addresses</i>, <i>Air</i> or
+    <i>Sea</i>; describes how the route is looked up.</td></tr>
+<tr><td><b>Available for booking</b></td><td>Offer this type to customers or hide it.</td></tr>
+</table>
+
+<p><b>A live preview sits on the same page.</b> As you type, it shows what the fare would be at
+5 km, 50 km and 200 km with the values currently in the boxes — check those three figures before
+saving and you will catch almost any input mistake.</p>
+
+<p><b>Validation rules the form enforces:</b> amounts must be numeric and cannot be negative;
+passenger capacity must be between 1 and 500; and a type must have <i>at least one</i> charge set
+(a base fare, a per-kilometre rate, a minimum fare or an additional fee) before it will save. This
+is what stops a vehicle being bookable at ₱0.</p>
+
+<div class="note">
+<table border="1" cellspacing="0" cellpadding="8" width="100%">
+<tr><td bgcolor="#fff4d6"><b>Repricing is not retroactive.</b> Saving new rates affects future
+bookings only. Existing reservations keep the fare they were quoted, and their tickets and receipts
+keep showing that original amount.</td></tr>
+</table>
+</div>
+
+<h3>4.3 The fare rule in one place</h3>
+<pre>extra distance = max(0, total distance − included distance)
+trip fare      = max(minimum fare, base fare + extra distance × additional rate)
+total fare     = trip fare × passengers + additional charges   (per passenger)
+               = trip fare                + additional charges  (per booking)</pre>
+<p>The minimum fare is applied <b>per trip, before</b> the passenger multiplier, and the additional
+charge is added <b>after</b> it. So a per-passenger type with a ₱400 floor and 3 passengers
+collects ₱1,200, not ₱400.</p>
+
+<h3>4.4 Add a brand-new vehicle type</h3>
+<ol>
+<li>On the dashboard click <b>+ Add Vehicle Type</b> (or go to <code>/admin/vehicle-types/new</code>).</li>
+<li>Enter the <b>Vehicle Type Name</b> and the full pricing form in the same step.</li>
+<li>Save. The type appears in the customer dropdown immediately — no code change, no restart.</li>
+</ol>
+<p>A duplicate name is rejected with a message and your entries are kept so you can correct them.
+The name cannot be renamed afterwards; delete-and-recreate, or keep the type disabled, instead.</p>
+<p><b>Nothing is bookable until it is priced.</b> A type without fare settings is listed as
+<span style="color:#b00020"><b>Needs pricing</b></span>, is excluded from the customer picker, and if
+you try to switch it on the system refuses and sends you to the fare form.</p>
+
+<h3>4.5 Enable or disable a type</h3>
+<p>Each row in the vehicle-type list has an on/off toggle. Turning a type <b>off</b> removes it from
+the customer picker at once but leaves existing bookings and tickets untouched. Turning it
+<b>on</b> is blocked while the type has no pricing.</p>
+
+<h3>4.6 Register vehicles in the fleet</h3>
+<p><b>🚐 Vehicle Registry → + Register Vehicle.</b> Fields: <b>Vehicle Code</b> (auto-assigned when
+adding), <b>Vehicle Type</b> (must be an existing type), <b>Vehicle Name / Model</b>,
+<b>Plate Number</b>, <b>Passenger Capacity</b> (1–200), <b>Assigned Driver</b> and
+<b>Vehicle Status</b>. This is the roster of actual units and their drivers — separate from the
+type, which holds the pricing.</p>
+
+<h3>4.7 Manage bookings as admin</h3>
+<p><b>All Reservations</b> and <b>All Passenger Tickets</b> list every booking with its saved
+distance and fare, and link straight to the ticket and receipt for printing. Admins can delete a
+reservation from here. Use the ticket's QR page (<code>/verify/&lt;ticket number&gt;</code>) to check
+a passenger's ticket at boarding — it shows the live status, so a cancelled ticket reads as cancelled.</p>
+
+<h2>5. Current fare card</h2>
+<p>As configured in this database today. Change these from the admin screens in §4.2; this table is
+only a snapshot.</p>
+<table border="1" cellspacing="0" cellpadding="4" width="100%">
+<tr bgcolor="#e8eefb">
+  <th width="14%">Type</th><th width="12%">Base</th><th width="12%">Incl. km</th>
+  <th width="12%">&#8369;/km</th><th width="15%">Charged</th><th width="9%">Seats</th>
+  <th width="26%">Status</th></tr>
+<tr><td><b>Bus</b></td><td>&#8369;0</td><td>0</td><td>&#8369;2.22</td><td>per passenger</td><td>45</td><td>Bookable</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Van</b></td><td>&#8369;0</td><td>0</td><td>&#8369;2.00</td><td>per passenger</td><td>12</td><td><b>Disabled</b> — hidden from customers</td></tr>
+<tr><td><b>Private Van</b></td><td>&#8369;1,500</td><td>25</td><td>&#8369;45.00</td><td>per booking</td><td>10</td><td>Bookable</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Taxi</b></td><td>&#8369;0</td><td>0</td><td>&#8369;13.50</td><td>per passenger</td><td>4</td><td>Bookable</td></tr>
+</table>
+<p class="meta">No type currently sets a minimum fare or an additional charge, so both are 0 across
+the board. Add either from the fare form and it appears here.</p>
+
+<h4>Sample fares at 40 km</h4>
+<table border="1" cellspacing="0" cellpadding="4" width="100%">
+<tr bgcolor="#e8eefb"><th width="22%">Type</th><th width="26%">1 passenger</th><th width="26%">3 passengers</th><th width="26%">10 passengers</th></tr>
+<tr><td>Bus</td><td>₱88.80</td><td>₱266.40</td><td>₱888.00</td></tr>
+<tr bgcolor="#f7f9fd"><td>Private Van</td><td>₱2,175.00</td><td>₱2,175.00</td><td>₱2,175.00</td></tr>
+<tr><td>Taxi</td><td>₱540.00</td><td>₱1,620.00</td><td>over capacity (4 seats)</td></tr>
+</table>
+
+<h2>6. How distance is measured</h2>
+<ol>
+<li>Pickup and destination are turned into coordinates by OpenStreetMap's <b>Nominatim</b> search
+    (results are cached, so repeat lookups are fast).</li>
+<li>With both coordinates known, the system asks <b>OSRM</b> for the <i>driving route</i> and uses
+    that road distance — the route line is drawn on the map.</li>
+<li>If routing is unavailable, it falls back to the straight-line distance between the two points.</li>
+<li>The distance is sanity-checked server-side against the straight-line figure and capped at
+    2,000 km, so a mistyped or tampered value cannot produce an absurd fare.</li>
+</ol>
+<p>Road distance is normally 1.2–1.6× the straight-line distance, so an estimate from a
+straight-line fallback reads slightly low. Re-run <b>🗺️ Calculate Road Distance &amp; Fare</b> when
+the map is reachable.</p>
+
+<h2>7. Seats and ticket numbering</h2>
+<p>Seats are handed out automatically. A "trip" is the combination of pickup location, origin,
+destination, date, time and vehicle; the first free seats in that trip are taken, and seats from
+cancelled tickets become available again. If the trip is full, the booking is refused.</p>
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="30%">Type</th><th>Seat labels</th></tr>
+<tr><td>Bus</td><td><code>A1 ... A45</code></td></tr>
+<tr bgcolor="#f7f9fd"><td>Van</td><td><code>V1 ... V12</code></td></tr>
+<tr><td>Private Van</td><td><code>PV1 ...</code> up to the capacity you set</td></tr>
+<tr bgcolor="#f7f9fd"><td>Taxi</td><td><code>T1 ... T4</code></td></tr>
+<tr><td><b>Any type you add</b></td><td><code>S1 ...</code> up to the capacity you set — generic labels,
+    no layout needed</td></tr>
+</table>
+<p>Booking references look like <code>BKF-20261018-0007</code>; ticket numbers like
+<code>TRS-000042-03</code> (reservation 42, third passenger).</p>
+
+<h2>8. Troubleshooting</h2>
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="38%">Symptom</th><th>Cause and fix</th></tr>
+<tr><td><b>Search returns nothing / map pins never appear</b></td>
+    <td>Nominatim is unreachable or rate-limited (its public policy allows about one request per
+    second). Wait a moment and retry, or place the pin manually with <b>📍 Set Pickup</b> /
+    <b>📍 Set Dest</b>.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>Distance stays blank after searching</b></td>
+    <td>The OSRM routing server did not answer. Click <b>🗺️ Calculate Road Distance &amp; Fare</b>
+    again; if it keeps failing the system falls back to straight-line distance once both points are
+    set.</td></tr>
+<tr><td><b>"The number of passenger names must match the number of passengers."</b></td>
+    <td>Fill every passenger name box, or lower the passenger count.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>A vehicle type is missing from the dropdown</b></td>
+    <td>It is either switched off or has no pricing yet. As admin, use <b>Edit Pricing</b> to set
+    rates and the toggle to switch it on.</td></tr>
+<tr><td><b>"... cannot be booked yet: an admin has to set its fare first."</b></td>
+    <td>Same as above — the type exists but is unpriced, so the system refuses to guess a number.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>The fare form will not save</b></td>
+    <td>A negative or non-numeric amount, a capacity outside 1–500, or every charge left at zero.
+    Set at least one charge.</td></tr>
+<tr><td><b>Quoted fare differs from the saved fare</b></td>
+    <td>Should no longer happen — distance is carried at two decimals end to end. If you edited the
+    distance box by hand, click <b>🗺️ Calculate Road Distance &amp; Fare</b> to re-measure.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b>"does not have enough available seats"</b></td>
+    <td>That trip is full. Change the time, or cancel a booking to release seats.</td></tr>
+<tr><td><b>Edited a price but an old ticket still shows the old amount</b></td>
+    <td>Correct behaviour. Bookings keep the fare they were quoted.</td></tr>
+<tr bgcolor="#f7f9fd"><td><b><code>ModuleNotFoundError: flask</code></b></td>
+    <td>You are using the system Python. Activate the project's <code>.venv</code> first.</td></tr>
+<tr><td><b>Browser says the site is unreachable on an odd port</b></td>
+    <td>Chrome blocks some ports as unsafe (5061 and 5062 among them). Use 5000, or 8090 for testing.</td></tr>
+</table>
+
+<h2>9. Things to know before real use</h2>
+<ul>
+<li><b>Fares are estimates up to the moment of booking.</b> The booking screen carries that notice;
+once confirmed, the amount saved with the reservation is what the ticket and receipt show, and it
+does not drift when prices are later changed. Traffic, tolls and route changes are not tracked
+automatically; use the edit screen (§3.5) to reprice a booking through the normal flow rather than
+editing the database.</li>
+<li><b>Free-tier map services.</b> Nominatim and the OSRM demo server are public, rate-limited and
+carry no availability guarantee. For a real operation, self-host or buy a routing/geocoding key.</li>
+<li><b>Passwords are stored as plain SHA-256 hashes</b>, which is not a modern hardened scheme, and
+the session secret is a literal in <code>app.py</code>. Fix both before this faces customers.</li>
+<li><b>Admin screens rely on the session flag</b> set at admin login; keep the admin password private,
+since pricing authority comes from that account.</li>
+<li><b>SQLite</b> suits a single-site operator with modest volume. Many simultaneous writers would
+call for a client/server database.</li>
+<li><b>Legacy files</b> — <code>app_backup.py</code>, <code>TRAVEL SYSTEM.py</code>,
+<code>templates/reservation_backup.html</code>, and the <code>main.py</code> desktop prototype at the
+project root — are not part of the running web app. Do not edit them expecting a change on screen.</li>
+</ul>
+
+<h2>10. Quick reference</h2>
+<table border="1" cellspacing="0" cellpadding="6" width="100%">
+<tr bgcolor="#e8eefb"><th width="40%">I want to...</th><th>Go to</th></tr>
+<tr><td>Book a trip</td><td>Dashboard → <b>+ Make New Reservation</b> → <code>/reservation</code></td></tr>
+<tr bgcolor="#f7f9fd"><td>See my tickets</td><td>Dashboard → <b>My Tickets</b> → <b>🎫 View Ticket</b></td></tr>
+<tr><td>Print a receipt</td><td>Dashboard → <b>My Tickets</b> → <b>🧾 Receipt</b></td></tr>
+<tr bgcolor="#f7f9fd"><td>Cancel a booking</td><td>Dashboard → <b>🚫 Cancel</b></td></tr>
+<tr><td>Change a fare rule</td><td><code>/admin</code> → Available Vehicle Types → <b>✏️ Edit Pricing</b></td></tr>
+<tr bgcolor="#f7f9fd"><td>Add a new vehicle type</td><td><code>/admin</code> → <b>+ Add Vehicle Type</b></td></tr>
+<tr><td>Switch a type on/off</td><td><code>/admin/vehicle-types</code> → row toggle</td></tr>
+<tr bgcolor="#f7f9fd"><td>Register a vehicle / driver</td><td><code>/admin/vehicles</code> → <b>+ Register Vehicle</b></td></tr>
+<tr><td>Verify a passenger's ticket</td><td>Scan the QR, or open <code>/verify/TRS-000042-01</code></td></tr>
+<tr bgcolor="#f7f9fd"><td>See every booking or ticket</td><td><code>/admin</code> → All Reservations / All Passenger Tickets</td></tr>
+</table>
+
+<p class="meta" style="margin-top:20pt">Travel Reservation System — User Guide ·
+web app in <code>TravelReservationSystem/</code> · technical reference: <code>SYSTEM_DOCS.md</code></p>
+
+</body>
+</html>

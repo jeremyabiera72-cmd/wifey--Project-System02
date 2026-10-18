@@ -316,7 +316,7 @@
 
                 <div>
                     <span class="label">DISTANCE</span>
-                    <div class="value">{{ '%.1f'|format(ticket.distance|float) }} KM</div>
+                    <div class="value">{{ '%.2f'|format(ticket.distance|float) }} KM</div>
                 </div>
 
                 <div>
@@ -350,7 +350,10 @@
 
                     <div class="total-row total">
                         <span>TOTAL</span>
-                        <strong>₱{{ '%.2f'|format((ticket.fare|float) * (ticket.passengers|int)) }}</strong>
+                        <strong>₱{{ '%.2f'|format(
+                            (ticket.reservation_fare if ticket.reservation_fare is not none
+                             else ticket.fare|float * ticket.passengers|int)|float
+                        ) }}</strong>
                     </div>
 
                 </div>
